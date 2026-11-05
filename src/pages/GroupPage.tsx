@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { feeNum, isFinished, money, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import { ask, copyText, notice } from '../dialogs'
+import ShareButton from '../Share'
 import { uploadCrest } from '../upload'
 import AutoImport, { importNext, refreshResults } from './AutoImport'
 
@@ -58,7 +59,6 @@ export default function GroupPage() {
 
   if (!group) return <p className="muted">Cargando…</p>
   const link = `${location.origin}${location.pathname}#/p/${group.code}`
-  const wa = `https://wa.me/?text=${encodeURIComponent(`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra. Armá tu prode y competí por el pozo: ${link}`)}`
 
   return (
     <>
@@ -76,8 +76,8 @@ export default function GroupPage() {
           <div className="card">
             <div className="eyebrow">Link para tus participantes</div>
             <div className="code small" style={{ wordBreak: 'break-all' }}>{link}</div>
-            <button className="link" onClick={() => copyText(link, 'Link copiado')}>Copiar</button>{' · '}
-            <a className="link" href={wa} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
+            <button className="link" onClick={() => copyText(link, 'Link copiado')}>Copiar</button>
+            <ShareButton text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra y competí por el pozo:`} url={link} ghost={false} />
           </div>
           <SettingsCard group={group} locked={locked} reload={load} />
           <PotCard group={group} locked={locked} approved={entries.filter((e) => e.status === 'approved').length} reload={load} />

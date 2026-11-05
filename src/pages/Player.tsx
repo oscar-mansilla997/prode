@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
 import { ask, copyText } from '../dialogs'
+import ShareButton, { appUrl } from '../Share'
 import { Crest, GroupRanking, fmtDate } from '../components'
 
 type Draft = Record<string, { h: string; a: string }>
@@ -45,6 +46,7 @@ export default function Player({ profile }: { profile: Profile }) {
         <h1>{group.name}</h1>
         <div className="potbox">Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>
       </div>
+      <ShareButton text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra y competí por el pozo:`} url={`${appUrl()}#/p/${code}`} label="Invitar amigos a este campeonato" />
       <div className="seg">
         <button className={tab === 'jugar' ? 'on' : ''} onClick={() => setTab('jugar')}>{entry?.submitted_at ? 'Mi jugada' : 'Jugar'}</button>
         <button className={tab === 'ranking' ? 'on' : ''} onClick={() => setTab('ranking')}>Ranking</button>
