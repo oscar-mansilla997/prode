@@ -15,12 +15,15 @@ export default function Admin() {
   const [err, setErr] = useState('')
   const [creating, setCreating] = useState(false)
   const [f, setF] = useState({ name: '', fee: '', pay_alias: '', pct: '' })
+  const [pct, setPct] = useState('')
+  const [pctMsg, setPctMsg] = useState('')
 
   const load = useCallback(async () => {
     const uid = (await supabase.auth.getUser()).data.user?.id
     const g = await supabase.from('groups').select('*').eq('owner_id', uid!).order('created_at', { ascending: false })
     const gl = (g.data as Group[]) ?? []
     setGroups(gl)
+    setPct((cur) => (cur === '' && gl[0] ? String(gl[0].commission_pct ?? 0) : cur))
     if (gl.length) {
       const r = await supabase.from('entries').select('*, profile:profiles(*), group:groups(id, name, fee, logo)')
         .in('group_id', gl.map((x) => x.id)).eq('status', 'pending').order('submitted_at')
@@ -32,6 +35,13 @@ export default function Admin() {
   async function decide(r: Req, status: 'approved' | 'rejected') {
     await supabase.from('entries').update({ status }).eq('id', r.id)
     load()
+  }
+  async function savePct() {
+    const v = Math.min(100, Math.max(0, Number(pct) || 0))
+    setPct(String(v))
+    const { error } = await supabase.from('groups').update({ commission_pct: v }).in('id', groups.map((g) => g.id))
+    setPctMsg(error ? error.message : 'Guardado en todos los campeonatos ✓')
+    if (!error) load()
   }
   async function setActive(g: Group, active: boolean) {
     setBusy(true)
@@ -88,6 +98,16 @@ export default function Admin() {
 
       {tab === 'campeonatos' && (
         <>
+          <div className="card pot">
+            <div className="eyebrow">Tu ganancia</div>
+            <div className="row" style={{ marginTop: 8 }}>
+              <span>Porcentaje que te queda de cada pozo</span>
+              <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} /> %</span>
+            </div>
+            <p className="small muted">Se descuenta del total recaudado: el resto es el premio. Ej: 4 jugadores × $5.000 con 10% → pozo $18.000 y te quedan $2.000.</p>
+            <button className="primary small" onClick={savePct}>Guardar</button>
+            {pctMsg && <span className="small muted"> {pctMsg}</span>}
+          </div>
           <p className="small muted">Prendé los campeonatos que querés ofrecer. Al prender uno nuevo, trae solo los partidos y el logo.</p>
           {LEAGUES.map((l) => {
             const g = groups.find((x) => x.league_id === l.id)
