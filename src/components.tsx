@@ -9,7 +9,10 @@ export function Avatar({ url, name, size = 36 }: { url?: string | null; name: st
 export function Ranking({ groupId, finished }: { groupId: string; finished: boolean }) {
   const [rows, setRows] = useState<Row[] | null>(null)
   useEffect(() => {
-    supabase.rpc('get_leaderboard', { gid: groupId }).then(({ data }) => setRows((data as Row[]) ?? []))
+    const pull = () => supabase.rpc('get_leaderboard', { gid: groupId }).then(({ data }) => setRows((data as Row[]) ?? []))
+    pull()
+    const t = setInterval(pull, 60000) // se refresca solo cada minuto
+    return () => clearInterval(t)
   }, [groupId])
   if (rows === null) return <p className="muted">Cargando…</p>
   const paid = rows.filter((r) => r.paid)

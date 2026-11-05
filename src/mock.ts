@@ -136,9 +136,12 @@ class Q {
 export const mockClient: any = {
   from: (t: string) => new Q(t),
   rpc: async (name: string, a: R) => {
+    if (name === 'list_prodes') {
+      return { data: db.groups.map((g) => ({ id: g.id, name: g.name, fee: g.fee, code: g.code, logo: g.logo ?? null, matches: db.matches.filter((m) => m.group_id === g.id).length, players: db.entries.filter((e) => e.group_id === g.id && e.status === 'approved').length })), error: null }
+    }
     if (name === 'get_group_by_code') {
       const g = db.groups.find((x) => x.code === String(a.p_code).trim().toUpperCase())
-      return { data: g ? [{ id: g.id, name: g.name, fee: g.fee, pay_alias: g.pay_alias, closes_at: g.closes_at }] : [], error: null }
+      return { data: g ? [{ id: g.id, name: g.name, fee: g.fee, pay_alias: g.pay_alias, closes_at: g.closes_at, logo: g.logo ?? null }] : [], error: null }
     }
     const ms = db.matches.filter((m) => m.group_id === a.gid)
     const data = db.entries

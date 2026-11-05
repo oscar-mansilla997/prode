@@ -26,7 +26,7 @@ create table groups (
   fee text,            -- ej: "$5000"
   pay_alias text,      -- alias donde transfieren
   closes_at timestamptz, -- (sin uso)
-  league_id int, season text, round int, from_date date, to_date date, -- importación automática
+  league_id int, season text, round int, from_date date, to_date date, logo text, -- importación automática
   created_at timestamptz default now()
 );
 
@@ -77,9 +77,9 @@ $$;
 
 -- Datos públicos del prode para quien entra con el link
 create function get_group_by_code(p_code text)
-returns table (id uuid, name text, fee text, pay_alias text, closes_at timestamptz)
+returns table (id uuid, name text, fee text, pay_alias text, closes_at timestamptz, logo text)
 language sql security definer set search_path = public stable as $$
-  select id, name, fee, pay_alias, closes_at from groups where code = upper(trim(p_code));
+  select id, name, fee, pay_alias, closes_at, logo from groups where code = upper(trim(p_code));
 $$;
 
 -- Puntaje: 3 exacto, 1 acierta ganador/empate, 0 resto
@@ -200,3 +200,14 @@ create policy "subir mi foto" on storage.objects for insert with check (
   bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "cambiar mi foto" on storage.objects for update using (
   bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Catálogo de prodes (pantalla principal)
+create or replace function list_prodes()
+returns table (id uuid, name text, fee text, code text, logo text, matches bigint, players bigint)
+language sql security definer set search_path = public stable as $$
+  select g.id, g.name, g.fee, g.code, g.logo,
+         (select count(*) from matches m where m.group_id = g.id),
+         (select count(*) from entries e where e.group_id = g.id and e.status = 'approved')
+  from groups g
+  order by g.created_at desc;
+$$;

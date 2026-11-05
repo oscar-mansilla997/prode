@@ -62,7 +62,7 @@ export async function importNext(groupId: string, leagueId: number): Promise<str
   const list = all.filter((e) => (e.dateEvent ?? '') >= addDays(center, -5) && (e.dateEvent ?? '') <= addDays(center, 5))
   if (!list.length) return 'No pude armar la fecha. Probá de nuevo en un rato o cargá los partidos a mano.'
   await save(groupId, list)
-  const u = await supabase.from('groups').update({ league_id: leagueId, season, round }).eq('id', groupId)
+  const u = await supabase.from('groups').update({ league_id: leagueId, season, round, logo: next.strLeagueBadge ?? null }).eq('id', groupId)
   if (u.error) throw new Error(u.error.message)
   return `Listo: ${list.length} partidos de la fecha ${round}.`
 }

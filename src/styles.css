@@ -44,3 +44,11 @@ a.link { color:var(--acc); text-decoration:none; }
 .win { border-color:#facc15; background:#1f1a05; }
 .crest { width:22px; height:22px; object-fit:contain; vertical-align:middle; margin:0 6px; }
 select { width:100%; padding:12px; margin:6px 0; border-radius:10px; border:1px solid var(--line); background:#0b1220; color:var(--txt); font-size:1rem; }
+.prodes { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.prodes .card { margin:0; }
+.prode { display:flex !important; flex-direction:column; align-items:center; text-align:center; gap:4px; }
+.logo { width:72px; height:72px; object-fit:contain; margin-bottom:6px; }
+.logo.ball { display:flex; align-items:center; justify-content:center; font-size:48px; }
+.hero { text-align:center; margin:8px 0 12px; }
+.hero h1 { margin:0; font-size:1.4rem; }
+.hero .logo { width:96px; height:96px; }

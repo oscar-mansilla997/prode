@@ -35,7 +35,10 @@ export default function Player({ profile }: { profile: Profile }) {
 
   return (
     <>
-      <h1>⚽ {group.name}</h1>
+      <div className="hero">
+        {group.logo ? <img className="logo" src={group.logo} alt="" /> : <div className="logo ball">⚽</div>}
+        <h1>{group.name}</h1>
+      </div>
       {entry === undefined ? <p className="muted">Cargando…</p>
         : entry === null ? (
           <div className="card">
