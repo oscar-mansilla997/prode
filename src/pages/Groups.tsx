@@ -30,6 +30,7 @@ export default function Groups() {
             return (
               <Link key={p.id} to={`/p/${p.code}`} className="card prode">
                 {p.logo ? <img className="logo" src={p.logo} alt="" /> : <div className="logo ball">⚽</div>}
+                {p.round && <span className={`pill ${p.finished ? 's-rejected' : 's-approved'}`} style={{ margin: 0 }}>Fecha {p.round}{p.finished ? ' · terminada' : ''}</span>}
                 <strong className="pname">{p.name}</strong>
                 <div className="pozo-box"><span>Pozo</span><b>{money(p.pot)}</b></div>
                 <div className="stats">

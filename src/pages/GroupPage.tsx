@@ -62,7 +62,7 @@ export default function GroupPage() {
 
   return (
     <>
-      <h2>{group.name}</h2>
+      <h2>{group.name}{group.round ? ` · Fecha ${group.round}` : ''}</h2>
       {filling && <p className="muted small">Trayendo los partidos y el logo del torneo…</p>}
       <nav className="tabs">
         {(['participantes', 'partidos', 'ranking', 'ajustes'] as Tab[]).map((t) => (

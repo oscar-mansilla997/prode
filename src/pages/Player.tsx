@@ -41,6 +41,7 @@ export default function Player({ profile }: { profile: Profile }) {
     <>
       <div className="hero">
         {group.logo ? <img className="logo" src={group.logo} alt="" /> : <div className="logo ball">⚽</div>}
+        {group.round && <div className="eyebrow">Fecha {group.round}{group.finished ? ' · terminada' : ''}</div>}
         <h1>{group.name}</h1>
         <div className="potbox">Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>
       </div>

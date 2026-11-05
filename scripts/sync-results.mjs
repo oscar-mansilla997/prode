@@ -47,3 +47,36 @@ for (const { league, season, round } of rounds.values()) {
   }
 }
 console.log(`Resultados actualizados: ${updated}`)
+
+// ---- Cuando una fecha termina, se abre sola la siguiente (cada fecha es su propio campeonato) ----
+const q = (v) => `'${String(v ?? '').replace(/'/g, "''")}'`
+const done = await sql(`
+  select g.id, g.owner_id, g.name, g.fee, g.pay_alias, g.commission_pct, g.logo, g.league_id, g.season, g.round
+  from groups g
+  where g.league_id is not null and g.round is not null and g.finish_notified and g.active
+    and not exists (select 1 from groups n where n.league_id = g.league_id and n.season = g.season and n.round = g.round + 1)`)
+let opened = 0
+for (const g of done) {
+  const next = Number(g.round) + 1
+  const res = await fetch(`https://www.thesportsdb.com/api/v1/json/123/eventsround.php?id=${Number(g.league_id)}&r=${next}&s=${encodeURIComponent(g.season)}`)
+  if (!res.ok) continue
+  const all = ((await res.json()).events ?? []).filter((e) => e.idEvent && e.strHomeTeam && e.strAwayTeam && e.dateEvent)
+  if (!all.length) continue
+  const days = all.map((e) => Date.parse(e.dateEvent + 'T00:00:00Z')).sort((a, b) => a - b)
+  const mid = days[Math.floor(days.length / 2)]
+  const list = all.filter((e) => Math.abs(Date.parse(e.dateEvent + 'T00:00:00Z') - mid) <= 6 * 864e5)
+  if (!list.length) continue
+  const ins = await sql(`insert into groups (owner_id, name, fee, pay_alias, commission_pct, logo, league_id, season, round)
+    values (${q(g.owner_id)}, ${q(g.name)}, ${q(g.fee)}, ${q(g.pay_alias)}, ${Number(g.commission_pct) || 0}, ${q(g.logo)}, ${Number(g.league_id)}, ${q(g.season)}, ${next})
+    returning id`)
+  const gid = ins[0].id
+  const values = list.map((e) => {
+    const ko = new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').toISOString()
+    return `(${q(gid)}, ${q(String(e.idEvent).replace(/\D/g, ''))}, ${q('Fecha ' + next)}, ${q(e.strHomeTeam)}, ${q(e.strAwayTeam)}, ${q(ko)}, ${q(e.strHomeTeamBadge)}, ${q(e.strAwayTeamBadge)})`
+  })
+  await sql(`insert into matches (group_id, external_id, round, home, away, kickoff, home_logo, away_logo) values ${values.join(',')}
+    on conflict (group_id, external_id) do nothing`)
+  opened++
+  console.log(`Fecha ${next} abierta para "${g.name}" (${list.length} partidos)`)
+}
+console.log(`Fechas nuevas abiertas: ${opened}`)

@@ -97,33 +97,19 @@ export async function refreshResults(group: Group, matches: Match[]): Promise<vo
 }
 
 export default function AutoImport({ group, matches, reload }: { group: Group; matches: Match[]; reload: () => void }) {
-  const [league, setLeague] = useState(String(group.league_id ?? LEAGUES[0].id))
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
   if (DEMO) return null
-
-  async function go(fn: () => Promise<string>) {
+  async function go() {
     setBusy(true); setMsg('')
-    try { setMsg(await fn()); reload() } catch (e) { setMsg('No se pudo traer: ' + (e as Error).message) }
+    try { await refreshResults(group, matches); setMsg('Resultados al día.'); reload() } catch (e) { setMsg('No se pudo actualizar: ' + (e as Error).message) }
     setBusy(false)
   }
-  const has = matches.some((m) => m.external_id)
-
   return (
     <div className="card">
-      <h3>⚡ Partidos automáticos</h3>
-      <p className="small muted">Elegí el torneo y la app trae los partidos con escudos. Los resultados se cargan solos cada vez que abrís este prode.</p>
-      <select value={league} onChange={(e) => setLeague(e.target.value)}>
-        {LEAGUES.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-      </select>
-      <button className="primary" disabled={busy} onClick={() => go(() => importNext(group.id, +league))}>
-        {busy ? 'Trayendo…' : 'Traer la próxima fecha'}
-      </button>
-      {has && (
-        <button className="ghost" disabled={busy} onClick={() => go(() => importFollowing(group, matches))}>
-          Sumar la fecha siguiente
-        </button>
-      )}
+      <h3>Partidos automáticos</h3>
+      <p className="small muted">Los partidos y resultados de esta fecha se cargan solos. Cuando todos tienen resultado, se avisa al ganador y se abre sola la fecha siguiente.</p>
+      <button className="ghost" disabled={busy} onClick={go}>{busy ? 'Actualizando…' : 'Actualizar resultados ahora'}</button>
       {msg && <p className="msg">{msg}</p>}
     </div>
   )

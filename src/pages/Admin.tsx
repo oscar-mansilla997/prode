@@ -88,6 +88,20 @@ export default function Admin() {
     nav(`/g/${(data as Group).id}`)
   }
 
+  const groupRow = (g: Group) => (
+    <div key={g.id} className="card">
+      <div className="row">
+        <span className="who">{g.logo ? <img className="crest" style={{ width: 34, height: 34 }} src={g.logo} alt="" /> : <span className="pos">?</span>}
+          <span><strong>{g.name}{g.round ? ` · Fecha ${g.round}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{LEAGUES.find((l) => l.id === g.league_id)?.name ?? 'Campeonato propio'}</div></span></span>
+        <button className={`toggle ${g.active ? 'on' : ''}`} disabled={busy} onClick={() => setActive(g, !g.active)}>{g.active ? 'Visible' : 'Oculto'}</button>
+      </div>
+      <div className="actions">
+        <Link to={`/g/${g.id}`} className="link">Administrar ›</Link>
+        <button className="danger" disabled={busy} onClick={() => removeGroup(g)}>Eliminar</button>
+      </div>
+    </div>
+  )
+
   return (
     <>
       <h2 style={{ marginTop: 8 }}>Administración</h2>
@@ -136,23 +150,17 @@ export default function Admin() {
             {pctMsg && <span className="small muted"> {pctMsg}</span>}
           </div>
           {err && <p className="msg">{err}</p>}
-          <h3>Tus campeonatos</h3>
-          {groups.length === 0 && <p className="empty">No tenés campeonatos. Agregá una liga acá abajo.</p>}
-          {groups.map((g) => (
-            <div key={g.id} className="card">
-              <div className="row">
-                <span className="who">{g.logo ? <img className="crest" style={{ width: 34, height: 34 }} src={g.logo} alt="" /> : <span className="pos">?</span>}
-                  <span><strong>{g.name}</strong><div className="small muted" style={{ margin: 0 }}>{LEAGUES.find((l) => l.id === g.league_id)?.name ?? 'Campeonato propio'}</div></span></span>
-                <button className={`toggle ${g.active ? 'on' : ''}`} disabled={busy} onClick={() => setActive(g, !g.active)}>{g.active ? 'Visible' : 'Oculto'}</button>
-              </div>
-              <div className="actions">
-                <Link to={`/g/${g.id}`} className="link">Administrar ›</Link>
-                <button className="danger" disabled={busy} onClick={() => removeGroup(g)}>Eliminar</button>
-              </div>
-            </div>
-          ))}
+          <h3>Fechas en juego</h3>
+          {groups.filter((g) => !g.finish_notified).length === 0 && <p className="empty">No tenés ninguna fecha en juego. Agregá una liga acá abajo.</p>}
+          {groups.filter((g) => !g.finish_notified).map(groupRow)}
+          {groups.some((g) => g.finish_notified) && (
+            <>
+              <h3>Fechas terminadas</h3>
+              {groups.filter((g) => g.finish_notified).map(groupRow)}
+            </>
+          )}
           <h3>Agregar una liga</h3>
-          <p className="small muted">Trae sola los partidos y el logo. Las que ya tenés no aparecen acá.</p>
+          <p className="small muted">Trae sola la fecha que viene, con partidos y escudos. Cuando termina, se abre sola la siguiente. Las que ya tenés no aparecen acá.</p>
           {LEAGUES.filter((l) => !groups.some((g) => g.league_id === l.id)).map((l) => (
             <div key={l.id} className="card row">
               <strong>{l.name}</strong>
