@@ -58,7 +58,7 @@ export default function GroupPage() {
 
   if (!group) return <p className="muted">Cargando…</p>
   const link = `${location.origin}${location.pathname}#/p/${group.code}`
-  const wa = `https://wa.me/?text=${encodeURIComponent(`Sumate a "${group.name}" y mandá tu jugada: ${link}`)}`
+  const wa = `https://wa.me/?text=${encodeURIComponent(`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra. Armá tu prode y competí por el pozo: ${link}`)}`
 
   return (
     <>
