@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { feeNum, isFinished, money, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import { uploadCrest } from '../upload'
@@ -9,6 +9,7 @@ type Tab = 'participantes' | 'partidos' | 'ranking' | 'ajustes'
 
 export default function GroupPage() {
   const { id } = useParams()
+  const nav = useNavigate()
   const [group, setGroup] = useState<Group | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
   const [entries, setEntries] = useState<Entry[]>([])
@@ -78,6 +79,18 @@ export default function GroupPage() {
           </div>
           <SettingsCard group={group} reload={load} />
           <PotCard group={group} approved={entries.filter((e) => e.status === 'approved').length} reload={load} />
+          <div className="card">
+            <div className="eyebrow">Zona de peligro</div>
+            <p className="small muted">Si lo eliminás se borran sus partidos, jugadas y ranking. No se puede deshacer. Si solo querés ocultarlo, apagalo con el interruptor de arriba.</p>
+            <button className="danger" onClick={async () => {
+              const n = entries.filter((e) => e.status === 'approved').length
+              const msg = n > 0 ? `Este campeonato tiene ${n} jugador(es) con pago confirmado. ¿Eliminar "${group.name}" igual?` : `¿Eliminar "${group.name}"?`
+              if (!confirm(msg)) return
+              const { error } = await supabase.from('groups').delete().eq('id', group.id)
+              if (error) return alert(error.message)
+              nav('/admin')
+            }}>Eliminar campeonato</button>
+          </div>
         </>
       )}
       {tab === 'participantes' && <Participants entries={entries} matches={matches} preds={preds} reload={load} />}
