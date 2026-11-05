@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { DEMO, supabase, type Entry, type Group, type Profile } from '../supabase'
+import { DEMO, money, supabase, type Entry, type Group, type Profile } from '../supabase'
 import { Avatar, PredList } from '../components'
 import { LEAGUES, importNext } from './AutoImport'
 
 type Req = Entry & { profile: Profile; group: { id: string; name: string; fee: string | null; logo: string | null } }
 
 export default function Admin() {
-  const [tab, setTab] = useState<'solicitudes' | 'campeonatos'>('solicitudes')
+  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'usuarios'>('resumen')
   const [groups, setGroups] = useState<Group[]>([])
   const [reqs, setReqs] = useState<Req[]>([])
   const [open, setOpen] = useState<string | null>(null)
@@ -70,11 +70,15 @@ export default function Admin() {
   return (
     <>
       <h2 style={{ marginTop: 8 }}>Administración</h2>
-      <div className="seg">
+      <div className="seg" style={{ overflowX: "auto" }}>
+        <button className={tab === 'resumen' ? 'on' : ''} onClick={() => setTab('resumen')}>Resumen</button>
         <button className={tab === 'solicitudes' ? 'on' : ''} onClick={() => setTab('solicitudes')}>Solicitudes{reqs.length > 0 && <span className="n">{reqs.length}</span>}</button>
         <button className={tab === 'campeonatos' ? 'on' : ''} onClick={() => setTab('campeonatos')}>Campeonatos</button>
+        <button className={tab === 'usuarios' ? 'on' : ''} onClick={() => setTab('usuarios')}>Usuarios</button>
       </div>
 
+      {tab === 'resumen' && <Resumen />}
+      {tab === 'usuarios' && <Usuarios />}
       {tab === 'solicitudes' && (reqs.length === 0 ? <p className="empty">No hay solicitudes pendientes.<br />Cuando alguien envíe su jugada, aparece acá para que confirmes el pago.</p> : reqs.map((r) => {
         const digits = r.profile.phone.replace(/\D/g, '')
         return (
@@ -138,6 +142,71 @@ export default function Admin() {
         </>
       )}
       {DEMO && <p className="small muted">Modo demo</p>}
+    </>
+  )
+}
+
+type Stats = { users: number; users_7d: number; users_today: number; players: number; sent: number; pending: number; approved: number; rejected: number
+  campeonatos: { id: string; name: string; logo: string | null; active: boolean; sent: number; approved: number; gross: number; mine: number }[] }
+
+function Resumen() {
+  const [s, setS] = useState<Stats | null | undefined>(undefined)
+  useEffect(() => { supabase.rpc('admin_stats').then(({ data }) => setS((data as Stats) ?? null)) }, [])
+  if (s === undefined) return <p className="muted">Cargando…</p>
+  if (s === null) return <p className="empty">No hay datos todavía.</p>
+  const gross = s.campeonatos.reduce((a, c) => a + Number(c.gross), 0)
+  const mine = s.campeonatos.reduce((a, c) => a + Number(c.mine), 0)
+  const K = ({ n, l, c }: { n: string | number; l: string; c?: string }) => (
+    <div className="card kpi"><div className="num" style={c ? { color: c } : undefined}>{n}</div><div className="eyebrow">{l}</div></div>
+  )
+  return (
+    <>
+      <div className="kpis">
+        <K n={s.users} l="Usuarios registrados" />
+        <K n={`+${s.users_7d}`} l="Nuevos (7 días)" />
+        <K n={s.players} l="Jugaron alguna vez" />
+        <K n={s.sent} l="Jugadas enviadas" />
+        <K n={s.pending} l="Por confirmar" c={s.pending ? 'var(--gold)' : undefined} />
+        <K n={s.approved} l="Pagadas" c="var(--acc)" />
+        <K n={money(gross)} l="Recaudado" />
+        <K n={money(mine)} l="Tu ganancia" c="var(--gold)" />
+      </div>
+      <h3>Por campeonato</h3>
+      {s.campeonatos.map((c) => (
+        <div key={c.id} className="card">
+          <div className="row">
+            <span className="who">{c.logo && <img className="crest" style={{ width: 28, height: 28 }} src={c.logo} alt="" />}<strong>{c.name}</strong></span>
+            <span className={`pill ${c.active ? 's-approved' : 's-rejected'}`} style={{ margin: 0 }}>{c.active ? 'Activo' : 'Apagado'}</span>
+          </div>
+          <div className="small muted">{c.sent} jugadas · {c.approved} pagadas · recaudado {money(Number(c.gross))} · tuyo <strong style={{ color: 'var(--gold)' }}>{money(Number(c.mine))}</strong></div>
+        </div>
+      ))}
+    </>
+  )
+}
+
+type U = { id: string; name: string; phone: string; alias: string; avatar_url: string | null; created_at: string; jugadas: number; pagadas: number }
+
+function Usuarios() {
+  const [l, setL] = useState<U[] | null>(null)
+  const [q, setQ] = useState('')
+  useEffect(() => { supabase.rpc('admin_users').then(({ data }) => setL((data as U[]) ?? [])) }, [])
+  if (l === null) return <p className="muted">Cargando…</p>
+  const t = q.trim().toLowerCase()
+  const list = l.filter((u) => !t || `${u.name} ${u.phone} ${u.alias}`.toLowerCase().includes(t))
+  return (
+    <>
+      <input placeholder={`Buscar entre ${l.length} usuarios`} value={q} onChange={(e) => setQ(e.target.value)} />
+      {list.map((u) => (
+        <div key={u.id} className="card">
+          <div className="row">
+            <span className="who"><Avatar url={u.avatar_url} name={u.name || '?'} size={38} />
+              <span><strong>{u.name || 'Sin nombre'}</strong><div className="small muted" style={{ margin: 0 }}>Alias {u.alias || '—'} · desde {new Date(u.created_at).toLocaleDateString('es-AR')}</div></span></span>
+            <span className="small muted" style={{ textAlign: 'right' }}>{u.jugadas} jugadas<br />{u.pagadas} pagadas</span>
+          </div>
+          {u.phone && <a className="link small" href={`https://wa.me/${u.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">WhatsApp {u.phone}</a>}
+        </div>
+      ))}
     </>
   )
 }

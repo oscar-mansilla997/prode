@@ -115,3 +115,6 @@ input.pct { width:64px; display:inline-block; padding:7px; margin:0; text-align:
 .brandtext { display:inline-flex; flex-direction:column; line-height:.9; font-family:'Exo 2', Inter, sans-serif; font-style:italic; font-weight:800; text-transform:uppercase; }
 .brandtext small { font-size:.62rem; color:#8c8c8c; letter-spacing:.3em; padding-left:2px; }
 .brandtext b { font-size:1.35rem; color:#fff; letter-spacing:.02em; }
+
+.kpis { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.kpi { margin:0; padding:14px; } .kpi .num { font-size:1.6rem; font-weight:800; margin-bottom:2px; }
