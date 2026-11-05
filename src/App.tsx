@@ -11,7 +11,6 @@ import Profile from './pages/Profile'
 import Bell from './Bell'
 import Brand from './Brand'
 import Admin from './pages/Admin'
-import MisJugadas from './pages/MisJugadas'
 import RankingPage from './pages/RankingPage'
 
 export default function App() {
@@ -76,7 +75,6 @@ export default function App() {
       <main className="screen">
         <Routes>
           <Route path="/" element={<Groups />} />
-          <Route path="/jugadas" element={<MisJugadas />} />
           <Route path="/ranking" element={<RankingPage />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/g/:id" element={<GroupPage />} />
@@ -87,7 +85,6 @@ export default function App() {
       </main>
       <nav className="nav">
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.trophy}Campeonatos</NavLink>
-        <NavLink to="/jugadas" className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.list}Mis jugadas</NavLink>
         <NavLink to="/ranking" className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.chart}Ranking</NavLink>
         {owner && <NavLink to="/admin" className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.shield}Admin{pending > 0 && <span className="dot">{pending}</span>}</NavLink>}
         <NavLink to="/perfil" className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.user}Perfil</NavLink>

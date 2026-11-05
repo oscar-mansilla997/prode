@@ -44,7 +44,7 @@ export default function Player({ profile }: { profile: Profile }) {
         <div className="potbox">Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>
       </div>
       <div className="seg">
-        <button className={tab === 'jugar' ? 'on' : ''} onClick={() => setTab('jugar')}>Jugar</button>
+        <button className={tab === 'jugar' ? 'on' : ''} onClick={() => setTab('jugar')}>{entry?.submitted_at ? 'Mi jugada' : 'Jugar'}</button>
         <button className={tab === 'ranking' ? 'on' : ''} onClick={() => setTab('ranking')}>Ranking</button>
       </div>
       {tab === 'ranking' ? <GroupRanking group={group} meId={entry?.id} />
@@ -116,11 +116,14 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
     setShowPay(true)
   }
 
+  const total = matches.reduce((a, m) => a + (points(draft[m.id] ? { home_pred: +draft[m.id].h, away_pred: +draft[m.id].a } : undefined, m) ?? 0), 0)
+
   return (
     <>
       {sent ? (
         <div className="card">
           <div className="row"><strong>Hola {profile.name}</strong><span className={`pill s-${entry!.status}`}>{statusLabel[entry!.status]}</span></div>
+          <div className="row" style={{ margin: '6px 0' }}><span className="muted small">Tus puntos</span><span className="pts">{total}</span></div>
           <p className="small">
             {entry!.status === 'approved' && 'Tu jugada está aprobada. ¡Ya estás compitiendo!'}
             {entry!.status === 'pending' && 'Jugada enviada. Para que entre a la competencia, el organizador tiene que confirmar tu transferencia.'}
@@ -148,7 +151,10 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
           const pts = points(d ? { home_pred: +d.h, away_pred: +d.a } : undefined, m)
           return (
             <div key={m.id} className="card match">
-              <div className="muted small">{m.round ? `${m.round} · ` : ''}{fmtDate(m.kickoff)}</div>
+              <div className="row">
+                <div className="muted small" style={{ margin: 0 }}>{m.round ? `${m.round} · ` : ''}{fmtDate(m.kickoff)}</div>
+                {sent && (pts !== null ? <span className={`pill p${pts}`} style={{ margin: 0 }}>{pts} pts</span> : <span className="pill s-pending" style={{ margin: 0 }}>Pendiente</span>)}
+              </div>
               <div className="teams">
                 <span className="team"><Crest url={m.home_logo} />{m.home}</span>
                 <input className="score" type="number" min={0} inputMode="numeric" disabled={locked} value={d?.h ?? ''} onChange={(e) => upd(m.id, 'h', e.target.value)} />
@@ -158,7 +164,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
               </div>
               {m.home_score !== null && (
                 <div className="small">Resultado: <strong>{m.home_score} - {m.away_score}</strong>
-                  {pts !== null && entry?.status === 'approved' && <span className={`pill p${pts}`}>{pts} pts</span>}</div>
+                </div>
               )}
               {!sent && locked && <div className="small muted">Partido ya empezado, no se puede pronosticar.</div>}
             </div>
