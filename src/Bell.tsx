@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { money, supabase } from './supabase'
-import { Icon } from './components'
+import { copyText } from './dialogs'
+import { Avatar, Icon } from './components'
 
-type N = { id: string; code: string | null; text: string; read: boolean; created_at: string; kind?: string | null; amount?: number | null }
+type N = { id: string; code: string | null; text: string; read: boolean; created_at: string; kind?: string | null; amount?: number | null; payload?: { name: string; alias: string; phone: string; avatar_url: string | null; amount: number }[] | null }
 
 export default function Bell() {
   const [list, setList] = useState<N[]>([])
   const [open, setOpen] = useState(false)
   const [shown, setShown] = useState<string[]>([])
+  const [view, setView] = useState<N | null>(null)
   const nav = useNavigate()
 
   const pull = useCallback(async () => {
@@ -25,6 +27,13 @@ export default function Bell() {
 
   const unread = list.filter((n) => !n.read).length
   const win = list.find((n) => n.kind === 'win' && !n.read && !shown.includes(n.id))
+  const adm = view ?? list.find((n) => n.kind === 'admin' && n.payload && !n.read && !shown.includes(n.id) && !win)
+  async function closeAdm() {
+    if (!adm) return
+    setShown((x) => [...x, adm.id]); setView(null)
+    await supabase.from('notifications').update({ read: true }).eq('id', adm.id)
+    pull()
+  }
   async function closeWin() {
     if (!win) return
     setShown((x) => [...x, win.id])
@@ -41,6 +50,27 @@ export default function Bell() {
   }
   return (
     <span className="bell">
+      {adm && !win && (
+        <div className="modal-bg" onClick={closeAdm}>
+          <div className="modal win" onClick={(e) => e.stopPropagation()}>
+            <div className="eyebrow">Campeonato terminado</div>
+            <h3 style={{ margin: '6px 0' }}>{adm.text}</h3>
+            <p className="small muted">Transferí el premio a:</p>
+            {(adm.payload ?? []).map((w, i) => (
+              <div key={i} className="card" style={{ textAlign: 'left' }}>
+                <div className="who"><Avatar url={w.avatar_url} name={w.name} size={46} />
+                  <span><strong>{w.name}</strong><div className="small" style={{ margin: 0, color: 'var(--gold)', fontWeight: 700 }}>{money(Number(w.amount))}</div></span></div>
+                <div className="row" style={{ marginTop: 8 }}>
+                  <span className="small" style={{ margin: 0 }}>Alias: <strong className="code">{w.alias || '—'}</strong></span>
+                  {w.alias && <button className="link" onClick={() => copyText(w.alias, 'Alias copiado')}>Copiar</button>}
+                </div>
+                {w.phone && <a className="link small" href={`https://wa.me/${w.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">WhatsApp {w.phone}</a>}
+              </div>
+            ))}
+            <button className="primary" onClick={closeAdm}>Listo</button>
+          </div>
+        </div>
+      )}
       {win && (
         <div className="modal-bg" onClick={closeWin}>
           <div className="modal win" onClick={(e) => e.stopPropagation()}>
@@ -59,7 +89,7 @@ export default function Bell() {
         <div className="bellbox">
           {list.length === 0 && <p className="small muted">Sin avisos todavía.</p>}
           {list.map((n) => (
-            <div key={n.id} className={`aviso ${n.read ? '' : 'new'}`} onClick={() => { setOpen(false); if (n.code) nav(`/p/${n.code}`) }}>
+            <div key={n.id} className={`aviso ${n.read ? '' : 'new'}`} onClick={() => { setOpen(false); if (n.kind === 'admin' && n.payload) setView(n); else if (n.code) nav(`/p/${n.code}`) }}>
               {n.text}{n.kind === 'win' && n.amount ? <strong style={{ color: 'var(--gold)' }}> {money(Number(n.amount))}</strong> : null}
             </div>
           ))}
