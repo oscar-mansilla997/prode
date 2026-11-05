@@ -9,6 +9,7 @@ import GroupPage from './pages/GroupPage'
 import Player from './pages/Player'
 import Profile from './pages/Profile'
 import Bell from './Bell'
+import Brand from './Brand'
 import Admin from './pages/Admin'
 import MisJugadas from './pages/MisJugadas'
 import RankingPage from './pages/RankingPage'
@@ -69,7 +70,7 @@ export default function App() {
   return (
     <>
       <header className="topbar">
-        <Link to="/" className="brand">Pro<span>de</span></Link>
+        <Link to="/" className="brand"><Brand /></Link>
         <div className="right"><Bell /></div>
       </header>
       <main className="screen">

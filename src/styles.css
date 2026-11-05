@@ -109,3 +109,9 @@ input.pct { width:64px; display:inline-block; padding:7px; margin:0; text-align:
 .bell svg { width:22px; height:22px; stroke:var(--txt); fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; vertical-align:middle; }
 .bellbox { position:absolute; right:0; top:38px; width:290px; max-height:60vh; overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:8px; z-index:40; box-shadow:0 12px 40px rgba(0,0,0,.6); }
 .aviso { padding:10px 12px; border-radius:10px; font-size:.88rem; margin-bottom:4px; } .aviso.new { background:#10281f; border:1px solid #1f5a45; }
+
+.brand { text-transform:none; letter-spacing:0; }
+.brandmark { display:inline-flex; align-items:center; gap:10px; }
+.brandtext { display:inline-flex; flex-direction:column; line-height:.9; font-family:'Exo 2', Inter, sans-serif; font-style:italic; font-weight:800; text-transform:uppercase; }
+.brandtext small { font-size:.62rem; color:#8c8c8c; letter-spacing:.3em; padding-left:2px; }
+.brandtext b { font-size:1.35rem; color:#fff; letter-spacing:.02em; }

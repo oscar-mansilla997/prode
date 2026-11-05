@@ -1,3 +1,4 @@
+import Brand from '../Brand'
 import { useState } from 'react'
 import { DEMO, supabase } from '../supabase'
 
@@ -28,7 +29,7 @@ export default function Login() {
   return (
     <div className="screen center">
       <form className="card" onSubmit={submit}>
-        <h1>⚽ Prode</h1>
+        <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 14px" }}><Brand size={64} /></div>
         {DEMO && (
           <div className="small muted">
             <strong>DEMO</strong> · contraseña <code>123456</code><br />

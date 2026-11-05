@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { HashRouter, MemoryRouter } from 'react-router-dom'
 import { DEMO } from './supabase'
 import App from './App'
+import '@fontsource/exo-2/800-italic.css'
 import './styles.css'
 
 const Router = DEMO ? MemoryRouter : HashRouter
