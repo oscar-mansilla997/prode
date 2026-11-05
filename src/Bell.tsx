@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabase'
+import { Icon } from './components'
 
 type N = { id: string; code: string | null; text: string; read: boolean; created_at: string }
 
@@ -32,7 +33,7 @@ export default function Bell() {
   }
   return (
     <span className="bell">
-      <button className="link" onClick={toggle} aria-label="Avisos">🔔{unread > 0 && <b className="badge">{unread}</b>}</button>
+      <button className="link" onClick={toggle} aria-label="Avisos">{Icon.bell}{unread > 0 && <b className="badge">{unread}</b>}</button>
       {open && (
         <div className="bellbox">
           {list.length === 0 && <p className="small muted">Sin avisos todavía.</p>}

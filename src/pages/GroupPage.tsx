@@ -4,7 +4,7 @@ import { feeNum, isFinished, money, points, supabase, statusLabel, type Entry, t
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import AutoImport, { importNext, refreshResults } from './AutoImport'
 
-type Tab = 'participantes' | 'partidos' | 'ranking'
+type Tab = 'participantes' | 'partidos' | 'ranking' | 'ajustes'
 
 export default function GroupPage() {
   const { id } = useParams()
@@ -60,21 +60,25 @@ export default function GroupPage() {
     <>
       <h2>{group.name}</h2>
       {filling && <p className="muted small">Trayendo los partidos y el logo del torneo…</p>}
-      <div className="card">
-        <div className="small muted">Link para tus participantes</div>
-        <div className="code small" style={{ wordBreak: 'break-all' }}>{link}</div>
-        <button className="link" onClick={() => navigator.clipboard?.writeText(link)}>Copiar</button>{' · '}
-        <a className="link" href={wa} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
-      </div>
-      <SettingsCard group={group} reload={load} />
-      <PotCard group={group} approved={entries.filter((e) => e.status === 'approved').length} reload={load} />
       <nav className="tabs">
-        {(['participantes', 'partidos', 'ranking'] as Tab[]).map((t) => (
+        {(['participantes', 'partidos', 'ranking', 'ajustes'] as Tab[]).map((t) => (
           <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
             {t[0].toUpperCase() + t.slice(1)}
           </button>
         ))}
       </nav>
+      {tab === 'ajustes' && (
+        <>
+          <div className="card">
+            <div className="eyebrow">Link para tus participantes</div>
+            <div className="code small" style={{ wordBreak: 'break-all' }}>{link}</div>
+            <button className="link" onClick={() => navigator.clipboard?.writeText(link)}>Copiar</button>{' · '}
+            <a className="link" href={wa} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
+          </div>
+          <SettingsCard group={group} reload={load} />
+          <PotCard group={group} approved={entries.filter((e) => e.status === 'approved').length} reload={load} />
+        </>
+      )}
       {tab === 'participantes' && <Participants entries={entries} matches={matches} preds={preds} reload={load} />}
       {tab === 'partidos' && <MatchesAdmin group={group} matches={matches} reload={load} />}
       {tab === 'ranking' && <Ranking key={rk} groupId={group.id} finished={isFinished(matches)} pot={potOf(group, entries.filter((e) => e.status === 'approved').length)} />}
@@ -110,9 +114,9 @@ function Participants({ entries, matches, preds, reload }: { entries: Entry[]; m
               <span className="who"><Avatar url={pr.avatar_url} name={pr.name} /> <strong>{pr.name}</strong></span>
               <span className={`pill s-${e.status}`}>{e.submitted_at ? statusLabel[e.status] : 'Sin enviar'}</span>
             </div>
-            <div className="small">📱 <a className="link" href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer">{pr.phone}</a></div>
-            {pr.birth_date && <div className="small">🎂 {new Date(pr.birth_date + 'T00:00').toLocaleDateString('es-AR')}</div>}
-            <div className="small">💳 Alias: <strong>{pr.alias}</strong></div>
+            <div className="small"><a className="link" href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer">{pr.phone}</a></div>
+            {pr.birth_date && <div className="small">Nac. {new Date(pr.birth_date + 'T00:00').toLocaleDateString('es-AR')}</div>}
+            <div className="small">Alias: <strong>{pr.alias}</strong></div>
             <div className="actions">
               <button className="primary small" disabled={!e.submitted_at || e.status === 'approved'} onClick={() => setStatus(e, 'approved')}>Aprobar</button>
               <button className="ghost small" disabled={e.status === 'rejected'} onClick={() => setStatus(e, 'rejected')}>Rechazar</button>
@@ -216,7 +220,7 @@ function PotCard({ group, approved, reload }: { group: Group; approved: number; 
   }
   return (
     <div className="card pot">
-      <h3>💰 Pozo</h3>
+      <h3>Pozo</h3>
       <div className="row"><span>Recaudado ({approved} aprobados × {money(feeNum(group.fee))})</span><strong>{money(gross)}</strong></div>
       <div className="row"><span>Tu porcentaje</span>
         <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} onBlur={save} /> % = <strong>{money(mine)}</strong></span></div>
@@ -241,7 +245,7 @@ function SettingsCard({ group, reload }: { group: Group; reload: () => void }) {
   return (
     <div className="card">
       <div className="row">
-        <h3>⚙️ Ajustes</h3>
+        <h3>Ajustes</h3>
         <button className={`toggle ${group.active ? 'on' : ''}`} onClick={toggle}>{group.active ? 'Activa' : 'Apagada'}</button>
       </div>
       <label className="small muted">Nombre</label>

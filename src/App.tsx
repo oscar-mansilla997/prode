@@ -1,19 +1,41 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, Route, Routes, Navigate } from 'react-router-dom'
+import { Link, NavLink, Route, Routes, Navigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { configured, supabase, type Profile as P } from './supabase'
-import { Avatar } from './components'
+import { Icon } from './components'
 import Login from './pages/Login'
 import Groups from './pages/Groups'
 import GroupPage from './pages/GroupPage'
 import Player from './pages/Player'
 import Profile from './pages/Profile'
 import Bell from './Bell'
+import Admin from './pages/Admin'
+import MisJugadas from './pages/MisJugadas'
+import RankingPage from './pages/RankingPage'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
   const [profile, setProfile] = useState<P | null>(null)
+  const [owner, setOwner] = useState(false)
+  const [pending, setPending] = useState(0)
+
+  useEffect(() => {
+    if (!session) return
+    const pull = async () => {
+      try {
+        const g = await supabase.from('groups').select('id').eq('owner_id', session.user.id)
+        const ids = ((g.data as { id: string }[]) ?? []).map((x) => x.id)
+        setOwner(ids.length > 0)
+        if (!ids.length) return setPending(0)
+        const r = await supabase.from('entries').select('id, submitted_at').in('group_id', ids).eq('status', 'pending')
+        setPending(((r.data as { submitted_at: string | null }[]) ?? []).filter((x) => x.submitted_at).length)
+      } catch { /* sin datos */ }
+    }
+    pull()
+    const t = setInterval(pull, 30000)
+    return () => clearInterval(t)
+  }, [session])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -47,22 +69,28 @@ export default function App() {
   return (
     <>
       <header className="topbar">
-        <Link to="/" className="brand">⚽ Prode</Link>
-        <div className="right">
-          <Bell />
-          <Link to="/perfil"><Avatar url={profile.avatar_url} name={profile.name || '?'} size={32} /></Link>
-          <button className="link" onClick={() => supabase.auth.signOut()}>Salir</button>
-        </div>
+        <Link to="/" className="brand">Pro<span>de</span></Link>
+        <div className="right"><Bell /></div>
       </header>
       <main className="screen">
         <Routes>
           <Route path="/" element={<Groups />} />
+          <Route path="/jugadas" element={<MisJugadas />} />
+          <Route path="/ranking" element={<RankingPage />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/g/:id" element={<GroupPage />} />
           <Route path="/p/:code" element={<Player profile={profile} />} />
           <Route path="/perfil" element={<Profile profile={profile} onSaved={loadProfile} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
+      <nav className="nav">
+        <NavLink to="/" end className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.trophy}Campeonatos</NavLink>
+        <NavLink to="/jugadas" className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.list}Mis jugadas</NavLink>
+        <NavLink to="/ranking" className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.chart}Ranking</NavLink>
+        {owner && <NavLink to="/admin" className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.shield}Admin{pending > 0 && <span className="dot">{pending}</span>}</NavLink>}
+        <NavLink to="/perfil" className={({ isActive }) => (isActive ? 'on' : '')}>{Icon.user}Perfil</NavLink>
+      </nav>
     </>
   )
 }

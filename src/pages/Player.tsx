@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { isFinished, money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
-import { Crest, Ranking, fmtDate } from '../components'
+import { money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
+import { Crest, GroupRanking, fmtDate } from '../components'
 
 type Draft = Record<string, { h: string; a: string }>
 
@@ -9,6 +9,7 @@ export default function Player({ profile }: { profile: Profile }) {
   const { code } = useParams()
   const [group, setGroup] = useState<PubGroup | null | undefined>(undefined)
   const [entry, setEntry] = useState<Entry | null | undefined>(undefined)
+  const [tab, setTab] = useState<'jugar' | 'ranking'>('jugar')
 
   useEffect(() => {
     ;(async () => {
@@ -40,9 +41,14 @@ export default function Player({ profile }: { profile: Profile }) {
       <div className="hero">
         {group.logo ? <img className="logo" src={group.logo} alt="" /> : <div className="logo ball">⚽</div>}
         <h1>{group.name}</h1>
-        <div className="potbox">💰 Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>
+        <div className="potbox">Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>
       </div>
-      {entry === undefined ? <p className="muted">Cargando…</p>
+      <div className="seg">
+        <button className={tab === 'jugar' ? 'on' : ''} onClick={() => setTab('jugar')}>Jugar</button>
+        <button className={tab === 'ranking' ? 'on' : ''} onClick={() => setTab('ranking')}>Ranking</button>
+      </div>
+      {tab === 'ranking' ? <GroupRanking group={group} meId={entry?.id} />
+        : entry === undefined ? <p className="muted">Cargando…</p>
         : !complete ? (
           <div className="card"><p>Completá tu perfil una sola vez para poder jugar.</p><Link to="/perfil" className="link">Ir a mi perfil</Link></div>
         ) : <Jugada group={group} entry={entry} ensureEntry={ensureEntry} profile={profile} onChange={setEntry} />}
@@ -127,7 +133,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
 
       {sent && entry!.status !== 'approved' && (group.fee || group.pay_alias) && (
         <div className="card pay">
-          <h3>💳 Pago</h3>
+          <h3>Pago pendiente</h3>
           {group.fee && <div>Valor de la jugada: <strong>{group.fee}</strong></div>}
           {group.pay_alias && <div>Transferí al alias: <strong className="code">{group.pay_alias}</strong>{' '}
             <button className="link" onClick={() => navigator.clipboard?.writeText(group.pay_alias!)}>copiar</button></div>}
@@ -170,7 +176,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
       {showPay && (
         <div className="modal-bg" onClick={() => setShowPay(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>✅ ¡Jugada enviada!</h2>
+            <h2>Jugada enviada</h2>
             <p>Para entrar a la competencia, transferí:</p>
             {group.fee && <div className="big">{group.fee}</div>}
             {group.pay_alias && (
@@ -180,18 +186,12 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
                 <button className="primary" onClick={() => navigator.clipboard?.writeText(group.pay_alias!)}>Copiar alias</button>
               </>
             )}
-            <p className="small muted">Cuando el organizador confirme tu pago, te llega un aviso en la campanita 🔔 y ya competís.</p>
+            <p className="small muted">Cuando el organizador confirme tu pago, te llega un aviso en la campana y ya competís.</p>
             <button className="ghost" onClick={() => setShowPay(false)}>Listo</button>
           </div>
         </div>
       )}
 
-      {sent && (
-        <>
-          <h3>Ranking</h3>
-          <Ranking groupId={group.id} finished={isFinished(matches)} pot={Number(group.pot)} />
-        </>
-      )}
     </>
   )
 }

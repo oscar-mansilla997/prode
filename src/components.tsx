@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { money, supabase, type Row } from './supabase'
+import { isFinished, money, points, supabase, type Match, type Prediction, type PubGroup, type Row } from './supabase'
 
 export function Avatar({ url, name, size = 36 }: { url?: string | null; name: string; size?: number }) {
-  const st = { width: size, height: size, fontSize: size * 0.45 }
+  const st = { width: size, height: size, fontSize: size * 0.42 }
   return url ? <img className="avatar" style={st} src={url} alt={name} /> : <span className="avatar ph" style={st}>{(name[0] ?? '?').toUpperCase()}</span>
 }
 
-export function Ranking({ groupId, finished, pot }: { groupId: string; finished: boolean; pot?: number }) {
+export function Ranking({ groupId, finished, pot, meId }: { groupId: string; finished: boolean; pot?: number; meId?: string }) {
   const [rows, setRows] = useState<Row[] | null>(null)
   useEffect(() => {
     const pull = () => supabase.rpc('get_leaderboard', { gid: groupId }).then(({ data }) => setRows((data as Row[]) ?? []))
@@ -16,35 +16,76 @@ export function Ranking({ groupId, finished, pot }: { groupId: string; finished:
   }, [groupId])
   if (rows === null) return <p className="muted">Cargando…</p>
   const paid = rows.filter((r) => r.paid)
-  const free = rows.filter((r) => !r.paid)
-  const top = (l: Row[]) => l.filter((r) => r.pts === l[0].pts && r.exactos === l[0].exactos)
-  const names = (l: Row[]) => top(l).map((r) => r.name).join(' y ')
-  const list = (l: Row[], empty: string) =>
-    l.length === 0 ? <p className="muted small">{empty}</p> : (
-      <div className="card">
-        {l.map((r, i) => (
-          <div key={r.entry_id} className="row rank">
-            <span className="who">{i + 1}. <Avatar url={r.avatar_url} name={r.name} size={28} /> {r.name}</span>
-            <span><strong>{r.pts}</strong> pts <span className="muted small">({r.exactos} exactos)</span></span>
-          </div>
-        ))}
-      </div>
-    )
+  const top = paid.filter((r) => paid.length && r.pts === paid[0].pts && r.exactos === paid[0].exactos)
   return (
     <>
       {finished && paid.length > 0 && (
-        <div className="card win">🏆 <strong>{top(paid).length > 1 ? 'Ganadores' : 'Ganador'} del premio:</strong> {names(paid)} con {paid[0].pts} pts{pot ? <> · se lleva <strong>{money(pot)}</strong></> : null}</div>
+        <div className="card win">
+          <div className="eyebrow">{top.length > 1 ? 'Ganadores' : 'Ganador'}</div>
+          <h3 style={{ margin: '4px 0' }}>{top.map((r) => r.name).join(' y ')}</h3>
+          <div className="small muted">{paid[0].pts} puntos{pot ? <> · se lleva <strong style={{ color: 'var(--gold)' }}>{money(pot)}</strong></> : null}</div>
+        </div>
       )}
-      {finished && free.length > 0 && (
-        <div className="card">🥈 Mejor puntaje sin pago (sin premio): <strong>{names(free)}</strong> con {free[0].pts} pts</div>
+      {paid.length === 0 ? <p className="empty">Todavía no hay jugadores confirmados.</p> : (
+        <div className="card">
+          {paid.map((r, i) => (
+            <div key={r.entry_id} className={`row rank ${meId && r.entry_id === meId ? 'me' : ''}`}>
+              <span className="who"><span className={`pos ${i < 3 ? 'g' + (i + 1) : ''}`}>{i + 1}</span><Avatar url={r.avatar_url} name={r.name} size={30} />{r.name}</span>
+              <span><span className="pts">{r.pts}</span> <span className="muted small">pts · {r.exactos} exactos</span></span>
+            </div>
+          ))}
+        </div>
       )}
-      <h3>Compiten por el premio</h3>
-      {list(paid, 'Todavía no hay jugadas aprobadas.')}
-      <h3>Sin pago confirmado</h3>
-      <p className="muted small">Juegan pero no se llevan el premio.</p>
-      {list(free, 'Nadie por ahora.')}
     </>
   )
+}
+
+/** Ranking de un campeonato (carga solo los partidos para saber si terminó) */
+export function GroupRanking({ group, meId }: { group: Pick<PubGroup, 'id' | 'pot'>; meId?: string }) {
+  const [matches, setMatches] = useState<Match[]>([])
+  useEffect(() => { supabase.from('matches').select('*').eq('group_id', group.id).then(({ data }) => setMatches((data as Match[]) ?? [])) }, [group.id])
+  return <Ranking groupId={group.id} finished={isFinished(matches)} pot={Number(group.pot)} meId={meId} />
+}
+
+/** Jugada de un participante, con resultados y puntos */
+export function PredList({ groupId, entryId, showPoints = true }: { groupId: string; entryId: string; showPoints?: boolean }) {
+  const [ms, setMs] = useState<Match[] | null>(null)
+  const [ps, setPs] = useState<Prediction[]>([])
+  useEffect(() => {
+    ;(async () => {
+      const [m, p] = await Promise.all([
+        supabase.from('matches').select('*').eq('group_id', groupId).order('kickoff'),
+        supabase.from('predictions').select('*').eq('entry_id', entryId),
+      ])
+      setMs((m.data as Match[]) ?? []); setPs((p.data as Prediction[]) ?? [])
+    })()
+  }, [groupId, entryId])
+  if (!ms) return <p className="muted small">Cargando…</p>
+  let total = 0
+  const rows = ms.map((m) => {
+    const p = ps.find((x) => x.match_id === m.id)
+    const pts = points(p, m)
+    if (pts) total += pts
+    return (
+      <div key={m.id} className="rank">
+        <div className="row">
+          <span className="small" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+            {m.home_logo && <img className="crest" style={{ width: 22, height: 22 }} src={m.home_logo} alt="" />}{m.home}
+            <span className="muted">vs</span>
+            {m.away_logo && <img className="crest" style={{ width: 22, height: 22 }} src={m.away_logo} alt="" />}{m.away}
+          </span>
+          <strong>{p ? `${p.home_pred} - ${p.away_pred}` : '—'}</strong>
+        </div>
+        {m.home_score !== null && (
+          <div className="small muted" style={{ margin: '4px 0 0' }}>
+            Resultado {m.home_score} - {m.away_score}
+            {showPoints && pts !== null && <span className={`pill p${pts}`}>{pts} pts</span>}
+          </div>
+        )}
+      </div>
+    )
+  })
+  return <>{rows}{showPoints && <div className="row" style={{ marginTop: 10 }}><span className="muted small">Total</span><span className="pts">{total} pts</span></div>}</>
 }
 
 export function fmtDate(iso: string) {
@@ -53,4 +94,13 @@ export function fmtDate(iso: string) {
 
 export function Crest({ url }: { url?: string | null }) {
   return url ? <img className="crest" src={url} alt="" loading="lazy" /> : null
+}
+
+export const Icon = {
+  trophy: <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3" /></svg>,
+  list: <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" /></svg>,
+  chart: <svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7" /></svg>,
+  shield: <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z" /></svg>,
+  user: <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21c1-4 4-6 8-6s7 2 8 6" /></svg>,
+  bell: <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0" /></svg>,
 }

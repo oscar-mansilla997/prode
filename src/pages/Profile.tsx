@@ -66,6 +66,7 @@ export default function Profile({ profile, onSaved }: { profile: P; onSaved: () 
         <button className="primary">Guardar</button>
         {msg && <p className="msg">{msg}</p>}
       </form>
+      <button className="ghost" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
     </>
   )
 }
