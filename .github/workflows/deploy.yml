@@ -24,6 +24,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Actualizar base de datos
+        run: node scripts/migrate.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - run: npm run build
         env:
           # Claves públicas (seguras de publicar)

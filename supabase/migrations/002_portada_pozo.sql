@@ -1,3 +1,4 @@
+alter table groups add column if not exists logo text;
 alter table groups add column if not exists commission_pct numeric not null default 0
   check (commission_pct >= 0 and commission_pct <= 100);
 
