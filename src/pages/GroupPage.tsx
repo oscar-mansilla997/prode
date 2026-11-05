@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { feeNum, isFinished, money, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
+import { uploadCrest } from '../upload'
 import AutoImport, { importNext, refreshResults } from './AutoImport'
 
 type Tab = 'participantes' | 'partidos' | 'ranking' | 'ajustes'
@@ -46,10 +47,10 @@ export default function GroupPage() {
   const filled = useRef(false)
   const [filling, setFilling] = useState(false)
   useEffect(() => {
-    if (!group || filled.current || matches.length > 0) return
+    if (!group || filled.current || matches.length > 0 || !group.league_id) return
     filled.current = true
     setFilling(true)
-    importNext(group.id, group.league_id ?? 4406).then(() => load()).catch(() => {}).finally(() => setFilling(false))
+    importNext(group.id, group.league_id!).then(() => load()).catch(() => {}).finally(() => setFilling(false))
   }, [group, matches, load])
 
   if (!group) return <p className="muted">Cargando…</p>
@@ -148,11 +149,16 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   const groupId = group.id
   const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
   const [err, setErr] = useState('')
+  const [teams, setTeams] = useState<{ id: string; name: string; logo: string | null }[]>([])
+  useEffect(() => { supabase.from('teams').select('*').order('name').then(({ data }) => setTeams((data as typeof teams) ?? [])) }, [])
 
   async function add(e: React.FormEvent) {
     e.preventDefault()
+    const h = teams.find((t) => t.id === f.home), a = teams.find((t) => t.id === f.away)
+    if (!h || !a) return setErr('Elegí los dos equipos.')
+    if (h.id === a.id) return setErr('Elegí dos equipos distintos.')
     const { error } = await supabase.from('matches').insert({
-      group_id: groupId, round: f.round || null, home: f.home, away: f.away,
+      group_id: groupId, round: f.round || null, home: h.name, away: a.name, home_logo: h.logo, away_logo: a.logo,
       kickoff: new Date(f.kickoff).toISOString(),
     })
     setErr(error?.message ?? '')
@@ -170,14 +176,22 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
 
   return (
     <>
-      <AutoImport group={group} matches={matches} reload={reload} />
+      {group.league_id && <AutoImport group={group} matches={matches} reload={reload} />}
       <form className="card" onSubmit={add}>
-        <h3>Agregar partido a mano</h3>
-        <input placeholder="Fecha / ronda (ej: Fecha 12)" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
-        <input placeholder="Local" value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required />
-        <input placeholder="Visitante" value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required />
-        <input type="datetime-local" value={f.kickoff} onChange={(e) => setF({ ...f, kickoff: e.target.value })} required />
-        <button className="primary">Agregar</button>
+        <h3>Agregar partido</h3>
+        {teams.length < 2 ? <p className="small muted">Primero cargá al menos dos equipos con su escudo en <strong>Admin → Equipos</strong>.</p> : (
+          <>
+            <input placeholder="Fecha / ronda (ej: Fecha 1)" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
+            <select value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required>
+              <option value="">Local…</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <select value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required>
+              <option value="">Visitante…</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <input type="datetime-local" value={f.kickoff} onChange={(e) => setF({ ...f, kickoff: e.target.value })} required />
+            <button className="primary">Agregar partido</button>
+          </>
+        )}
         {err && <p className="msg">{err}</p>}
       </form>
       <h3>Partidos y resultados</h3>
@@ -247,6 +261,14 @@ function SettingsCard({ group, reload }: { group: Group; reload: () => void }) {
       <div className="row">
         <h3>Ajustes</h3>
         <button className={`toggle ${group.active ? 'on' : ''}`} onClick={toggle}>{group.active ? 'Activa' : 'Apagada'}</button>
+      </div>
+      <label className="small muted">Logo del campeonato</label>
+      <div className="who">
+        {group.logo ? <img className="crest" style={{ width: 44, height: 44 }} src={group.logo} alt="" /> : <span className="pos">?</span>}
+        <input type="file" accept="image/*" onChange={async (e) => {
+          const f = e.target.files?.[0]; if (!f) return
+          try { const logo = await uploadCrest(f); await supabase.from('groups').update({ logo }).eq('id', group.id); setMsg('Logo cambiado ✓'); reload() } catch (x) { setMsg((x as Error).message) }
+        }} />
       </div>
       <label className="small muted">Nombre</label>
       <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />

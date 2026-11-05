@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { DEMO, money, supabase, type Entry, type Group, type Profile } from '../supabase'
 import { Avatar, PredList } from '../components'
 import { LEAGUES, importNext } from './AutoImport'
+import { uploadCrest } from '../upload'
 
 type Req = Entry & { profile: Profile; group: { id: string; name: string; fee: string | null; logo: string | null } }
 
 export default function Admin() {
-  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'usuarios'>('resumen')
+  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'equipos' | 'usuarios'>('resumen')
   const [groups, setGroups] = useState<Group[]>([])
   const [reqs, setReqs] = useState<Req[]>([])
   const [open, setOpen] = useState<string | null>(null)
@@ -15,6 +16,8 @@ export default function Admin() {
   const [err, setErr] = useState('')
   const [creating, setCreating] = useState(false)
   const [f, setF] = useState({ name: '', fee: '', pay_alias: '', pct: '' })
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const nav = useNavigate()
   const [pct, setPct] = useState('')
   const [pctMsg, setPctMsg] = useState('')
 
@@ -61,10 +64,14 @@ export default function Admin() {
   }
   async function createCustom(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setErr('')
-    const { error } = await supabase.from('groups').insert({ name: f.name, fee: f.fee || null, pay_alias: f.pay_alias || null, commission_pct: Math.min(100, Math.max(0, Number(f.pct) || 0)) })
+    let logo: string | null = null
+    try { if (logoFile) logo = await uploadCrest(logoFile) } catch (x) { setBusy(false); return setErr((x as Error).message) }
+    const { data, error } = await supabase.from('groups')
+      .insert({ name: f.name, logo, fee: f.fee || null, pay_alias: f.pay_alias || groups[0]?.pay_alias || null, commission_pct: Math.min(100, Math.max(0, Number(f.pct || pct) || 0)) })
+      .select().single()
     setBusy(false)
     if (error) return setErr(error.message)
-    setCreating(false); setF({ name: '', fee: '', pay_alias: '', pct: '' }); load()
+    nav(`/g/${(data as Group).id}`)
   }
 
   return (
@@ -74,11 +81,13 @@ export default function Admin() {
         <button className={tab === 'resumen' ? 'on' : ''} onClick={() => setTab('resumen')}>Resumen</button>
         <button className={tab === 'solicitudes' ? 'on' : ''} onClick={() => setTab('solicitudes')}>Solicitudes{reqs.length > 0 && <span className="n">{reqs.length}</span>}</button>
         <button className={tab === 'campeonatos' ? 'on' : ''} onClick={() => setTab('campeonatos')}>Campeonatos</button>
+        <button className={tab === 'equipos' ? 'on' : ''} onClick={() => setTab('equipos')}>Equipos</button>
         <button className={tab === 'usuarios' ? 'on' : ''} onClick={() => setTab('usuarios')}>Usuarios</button>
       </div>
 
       {tab === 'resumen' && <Resumen />}
       {tab === 'usuarios' && <Usuarios />}
+      {tab === 'equipos' && <Equipos />}
       {tab === 'solicitudes' && (reqs.length === 0 ? <p className="empty">No hay solicitudes pendientes.<br />Cuando alguien envíe su jugada, aparece acá para que confirmes el pago.</p> : reqs.map((r) => {
         const digits = r.profile.phone.replace(/\D/g, '')
         return (
@@ -129,9 +138,12 @@ export default function Admin() {
             </div>
           ))}
           {err && <p className="msg">{err}</p>}
-          {!creating ? <button className="ghost" onClick={() => setCreating(true)}>Crear campeonato con partidos a mano</button> : (
+          {!creating ? <button className="ghost" onClick={() => setCreating(true)}>Crear campeonato propio (armo equipos y partidos)</button> : (
             <form className="card" onSubmit={createCustom}>
-              <input placeholder="Nombre" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
+              <h3>Campeonato propio</h3>
+              <input placeholder="Nombre (ej: Copa de los Amigos)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
+              <label className="small muted">Logo del campeonato (opcional)</label>
+              <input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
               <input placeholder="Valor de la jugada (ej: $5000)" value={f.fee} onChange={(e) => setF({ ...f, fee: e.target.value })} />
               <input type="number" min={0} max={100} inputMode="decimal" placeholder="Tu porcentaje del pozo" value={f.pct} onChange={(e) => setF({ ...f, pct: e.target.value })} />
               <input placeholder="Alias para recibir la transferencia" value={f.pay_alias} onChange={(e) => setF({ ...f, pay_alias: e.target.value })} />
@@ -205,6 +217,55 @@ function Usuarios() {
             <span className="small muted" style={{ textAlign: 'right' }}>{u.jugadas} jugadas<br />{u.pagadas} pagadas</span>
           </div>
           {u.phone && <a className="link small" href={`https://wa.me/${u.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">WhatsApp {u.phone}</a>}
+        </div>
+      ))}
+    </>
+  )
+}
+
+type T = { id: string; name: string; logo: string | null }
+
+function Equipos() {
+  const [teams, setTeams] = useState<T[] | null>(null)
+  const [name, setName] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('teams').select('*').order('name')
+    setTeams((data as T[]) ?? [])
+  }, [])
+  useEffect(() => { load() }, [load])
+  async function add(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setErr('')
+    try {
+      const logo = file ? await uploadCrest(file) : null
+      const { error } = await supabase.from('teams').insert({ name: name.trim(), logo })
+      if (error) throw new Error(error.message)
+      setName(''); setFile(null); (document.getElementById('crest-file') as HTMLInputElement | null)?.setAttribute('value', '')
+      await load()
+    } catch (x) { setErr((x as Error).message) }
+    setBusy(false)
+  }
+  async function remove(t: T) {
+    if (!confirm(`¿Borrar ${t.name}?`)) return
+    await supabase.from('teams').delete().eq('id', t.id)
+    load()
+  }
+  return (
+    <>
+      <p className="small muted">Cargá tus equipos una vez, con su escudo, y después los elegís al armar los partidos de un campeonato propio.</p>
+      <form className="card" onSubmit={add}>
+        <input placeholder="Nombre del equipo" value={name} onChange={(e) => setName(e.target.value)} required />
+        <label className="small muted">Escudo (imagen)</label>
+        <input id="crest-file" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <button className="primary" disabled={busy}>{busy ? 'Subiendo…' : 'Agregar equipo'}</button>
+        {err && <p className="msg">{err}</p>}
+      </form>
+      {teams === null ? <p className="muted">Cargando…</p> : teams.length === 0 ? <p className="empty">Todavía no cargaste equipos.</p> : teams.map((t) => (
+        <div key={t.id} className="card row">
+          <span className="who">{t.logo ? <img className="crest" style={{ width: 34, height: 34 }} src={t.logo} alt="" /> : <span className="pos">?</span>}<strong>{t.name}</strong></span>
+          <button className="danger" onClick={() => remove(t)}>Borrar</button>
         </div>
       ))}
     </>
