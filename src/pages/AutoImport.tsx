@@ -6,6 +6,7 @@ const BASE = 'https://www.thesportsdb.com/api/v1/json/123'
 export const LEAGUES = [
   { id: 4406, name: 'Liga Profesional Argentina' },
   { id: 4501, name: 'Copa Libertadores' },
+  { id: 4724, name: 'Copa Sudamericana' },
   { id: 4480, name: 'UEFA Champions League' },
   { id: 4328, name: 'Premier League (Inglaterra)' },
   { id: 4335, name: 'La Liga (España)' },
