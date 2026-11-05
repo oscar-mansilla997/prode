@@ -43,9 +43,14 @@ export default function Admin() {
   async function savePct() {
     const v = Math.min(100, Math.max(0, Number(pct) || 0))
     setPct(String(v))
-    const { error } = await supabase.from('groups').update({ commission_pct: v }).in('id', groups.map((g) => g.id))
-    setPctMsg(error ? error.message : 'Guardado en todos los campeonatos ✓')
-    if (!error) load()
+    let blocked = 0
+    for (const g of groups) {
+      if (Number(g.commission_pct) === v) continue
+      const { error } = await supabase.from('groups').update({ commission_pct: v }).eq('id', g.id)
+      if (error) blocked++
+    }
+    setPctMsg(blocked ? `${blocked} campeonato(s) tienen una fecha en juego y no se pueden cambiar ahora.` : 'Guardado ✓')
+    load()
   }
   async function setActive(g: Group, active: boolean) {
     setBusy(true)
@@ -126,7 +131,7 @@ export default function Admin() {
               <span>Porcentaje que te queda de cada pozo</span>
               <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} /> %</span>
             </div>
-            <p className="small muted">Se descuenta del total recaudado: el resto es el premio. Ej: 4 jugadores × $5.000 con 10% → pozo $18.000 y te quedan $2.000.</p>
+            <p className="small muted">Se descuenta del total recaudado: el resto es el premio. Solo se puede cambiar antes de que arranque una fecha o cuando terminó. Ej: 4 jugadores × $5.000 con 10% → pozo $18.000 y te quedan $2.000.</p>
             <button className="primary small" onClick={savePct}>Guardar</button>
             {pctMsg && <span className="small muted"> {pctMsg}</span>}
           </div>

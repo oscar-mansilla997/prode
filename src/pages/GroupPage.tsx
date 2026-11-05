@@ -17,6 +17,7 @@ export default function GroupPage() {
   const [preds, setPreds] = useState<Prediction[]>([])
   const [tab, setTab] = useState<Tab>('participantes')
   const [rk, setRk] = useState(0)
+  const locked = matches.some((m) => new Date(m.kickoff) <= new Date() && m.home_score === null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -78,8 +79,8 @@ export default function GroupPage() {
             <button className="link" onClick={() => navigator.clipboard?.writeText(link)}>Copiar</button>{' · '}
             <a className="link" href={wa} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
           </div>
-          <SettingsCard group={group} reload={load} />
-          <PotCard group={group} approved={entries.filter((e) => e.status === 'approved').length} reload={load} />
+          <SettingsCard group={group} locked={locked} reload={load} />
+          <PotCard group={group} locked={locked} approved={entries.filter((e) => e.status === 'approved').length} reload={load} />
           <div className="card">
             <div className="eyebrow">Zona de peligro</div>
             <p className="small muted">Si lo eliminás se borran sus partidos, jugadas y ranking. No se puede deshacer. Si solo querés ocultarlo, apagalo con el interruptor de arriba.</p>
@@ -235,7 +236,7 @@ function ResultRow({ m, onSave, onDelete }: { m: Match; onSave: (m: Match, h: st
 
 const potOf = (g: Group, approved: number) => Math.round(feeNum(g.fee) * approved * (1 - (g.commission_pct ?? 0) / 100))
 
-function PotCard({ group, approved, reload }: { group: Group; approved: number; reload: () => void }) {
+function PotCard({ group, locked, approved, reload }: { group: Group; locked: boolean; approved: number; reload: () => void }) {
   const [pct, setPct] = useState(String(group.commission_pct ?? 0))
   const [msg, setMsg] = useState('')
   const gross = feeNum(group.fee) * approved
@@ -251,18 +252,19 @@ function PotCard({ group, approved, reload }: { group: Group; approved: number; 
       <h3>Pozo</h3>
       <div className="row"><span>Recaudado ({approved} aprobados × {money(feeNum(group.fee))})</span><strong>{money(gross)}</strong></div>
       <div className="row"><span>Tu porcentaje</span>
-        <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} onBlur={save} /> % = <strong>{money(mine)}</strong></span></div>
+        <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" disabled={locked} value={pct} onChange={(e) => setPct(e.target.value)} onBlur={save} /> % = <strong>{money(mine)}</strong></span></div>
       <div className="row total"><span>Pozo para el ganador</span><strong>{money(gross - mine)}</strong></div>
+      {locked && <p className="small muted">Hay una fecha en juego: el porcentaje se puede cambiar de nuevo cuando termine.</p>}
       {msg && <span className="small muted">{msg}</span>}
     </div>
   )
 }
 
-function SettingsCard({ group, reload }: { group: Group; reload: () => void }) {
+function SettingsCard({ group, locked, reload }: { group: Group; locked: boolean; reload: () => void }) {
   const [v, setV] = useState({ name: group.name, fee: group.fee ?? '', pay_alias: group.pay_alias ?? '' })
   const [msg, setMsg] = useState('')
   async function save() {
-    const { error } = await supabase.from('groups').update({ name: v.name.trim() || group.name, fee: v.fee.trim() || null, pay_alias: v.pay_alias.trim() || null }).eq('id', group.id)
+    const { error } = await supabase.from('groups').update({ name: v.name.trim() || group.name, ...(locked ? {} : { fee: v.fee.trim() || null }), pay_alias: v.pay_alias.trim() || null }).eq('id', group.id)
     setMsg(error ? error.message : 'Guardado ✓')
     if (!error) reload()
   }
@@ -286,8 +288,8 @@ function SettingsCard({ group, reload }: { group: Group; reload: () => void }) {
       </div>
       <label className="small muted">Nombre</label>
       <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
-      <label className="small muted">Valor de la jugada</label>
-      <input value={v.fee} placeholder="ej: $5000" onChange={(e) => setV({ ...v, fee: e.target.value })} />
+      <label className="small muted">Valor de la jugada{locked && ' (bloqueado: hay una fecha en juego)'}</label>
+      <input value={v.fee} placeholder="ej: $5000" disabled={locked} onChange={(e) => setV({ ...v, fee: e.target.value })} />
       <label className="small muted">Alias para transferir</label>
       <input value={v.pay_alias} onChange={(e) => setV({ ...v, pay_alias: e.target.value })} />
       <button className="primary" onClick={save}>Guardar</button>
