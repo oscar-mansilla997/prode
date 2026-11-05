@@ -136,3 +136,7 @@ label.small.muted, .lbl { display:block; color:#b4bfd0; font-size:.8rem; font-we
 .sharebtn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px 14px; margin:8px 0; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--txt); text-decoration:none; font-weight:600; font-size:.95rem; }
 .sharebtn svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .sharebtn.solid { background:#10392c; border-color:#1f7a5c; color:#63e0b6; }
+
+/* sin barras de scroll visibles (se sigue pudiendo deslizar) */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
