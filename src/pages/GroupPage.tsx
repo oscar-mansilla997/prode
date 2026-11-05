@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { feeNum, isFinished, money, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
-import AutoImport, { refreshResults } from './AutoImport'
+import AutoImport, { importNext, refreshResults } from './AutoImport'
 
 type Tab = 'participantes' | 'partidos' | 'ranking'
 
@@ -42,6 +42,16 @@ export default function GroupPage() {
     refreshResults(group, matches).then(() => load()).catch(() => {})
   }, [group, matches, load])
 
+  // Si el prode está vacío, trae solo la próxima fecha y el logo del torneo
+  const filled = useRef(false)
+  const [filling, setFilling] = useState(false)
+  useEffect(() => {
+    if (!group || filled.current || matches.length > 0) return
+    filled.current = true
+    setFilling(true)
+    importNext(group.id, group.league_id ?? 4406).then(() => load()).catch(() => {}).finally(() => setFilling(false))
+  }, [group, matches, load])
+
   if (!group) return <p className="muted">Cargando…</p>
   const link = `${location.origin}${location.pathname}#/p/${group.code}`
   const wa = `https://wa.me/?text=${encodeURIComponent(`Sumate a "${group.name}" y mandá tu jugada: ${link}`)}`
@@ -49,6 +59,7 @@ export default function GroupPage() {
   return (
     <>
       <h2>{group.name}</h2>
+      {filling && <p className="muted small">Trayendo los partidos y el logo del torneo…</p>}
       <div className="card">
         <div className="small muted">Link para tus participantes</div>
         <div className="code small" style={{ wordBreak: 'break-all' }}>{link}</div>
