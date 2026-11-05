@@ -47,3 +47,7 @@ export function Ranking({ groupId, finished }: { groupId: string; finished: bool
 export function fmtDate(iso: string) {
   return new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
+
+export function Crest({ url }: { url?: string | null }) {
+  return url ? <img className="crest" src={url} alt="" loading="lazy" /> : null
+}

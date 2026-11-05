@@ -42,3 +42,4 @@ a.link { color:var(--acc); text-decoration:none; }
 .who { display:inline-flex; align-items:center; gap:8px; }
 .topbar .right { display:flex; align-items:center; gap:14px; }
 .win { border-color:#facc15; background:#1f1a05; }
+.crest { width:22px; height:22px; object-fit:contain; vertical-align:middle; margin:0 6px; }

@@ -25,7 +25,8 @@ create table groups (
   owner_id uuid not null references auth.users default auth.uid(),
   fee text,            -- ej: "$5000"
   pay_alias text,      -- alias donde transfieren
-  closes_at timestamptz, -- cuándo termina el prode (se declaran ganadores)
+  closes_at timestamptz, -- (sin uso)
+  league_id int, season text, round int, from_date date, to_date date, -- importación automática
   created_at timestamptz default now()
 );
 
@@ -37,8 +38,12 @@ create table matches (
   away text not null,
   kickoff timestamptz not null,
   home_score int,
-  away_score int
+  away_score int,
+  external_id text,
+  home_logo text,
+  away_logo text
 );
+create unique index matches_ext on matches (group_id, external_id);
 
 -- Un participante (jugada) por persona
 create table entries (

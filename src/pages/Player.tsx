@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { isFinished, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
-import { Avatar, Ranking, fmtDate } from '../components'
+import { Avatar, Crest, Ranking, fmtDate } from '../components'
 
 type Draft = Record<string, { h: string; a: string }>
 
@@ -142,11 +142,11 @@ function Jugada({ group, entry, profile, onChange }: { group: PubGroup; entry: E
             <div key={m.id} className="card match">
               <div className="muted small">{m.round ? `${m.round} · ` : ''}{fmtDate(m.kickoff)}</div>
               <div className="teams">
-                <span className="team">{m.home}</span>
+                <span className="team"><Crest url={m.home_logo} />{m.home}</span>
                 <input className="score" type="number" min={0} inputMode="numeric" disabled={locked} value={d?.h ?? ''} onChange={(e) => upd(m.id, 'h', e.target.value)} />
                 <span>-</span>
                 <input className="score" type="number" min={0} inputMode="numeric" disabled={locked} value={d?.a ?? ''} onChange={(e) => upd(m.id, 'a', e.target.value)} />
-                <span className="team right">{m.away}</span>
+                <span className="team right">{m.away}<Crest url={m.away_logo} /></span>
               </div>
               {m.home_score !== null && (
                 <div className="small">Resultado: <strong>{m.home_score} - {m.away_score}</strong>

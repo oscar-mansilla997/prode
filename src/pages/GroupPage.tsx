@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { isFinished, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
-import { Avatar, Ranking, fmtDate } from '../components'
+import { Avatar, Crest, Ranking, fmtDate } from '../components'
+import AutoImport, { syncGroup } from './AutoImport'
 
 type Tab = 'participantes' | 'partidos' | 'ranking'
 
@@ -33,6 +34,14 @@ export default function GroupPage() {
   }, [id])
   useEffect(() => { load() }, [load])
 
+  // Actualiza resultados solo al abrir el prode (si está configurada la importación)
+  const synced = useRef(false)
+  useEffect(() => {
+    if (!group || synced.current || !group.league_id || !group.round) return
+    synced.current = true
+    syncGroup(group).then(() => load()).catch(() => {})
+  }, [group, load])
+
   if (!group) return <p className="muted">Cargando…</p>
   const link = `${location.origin}${location.pathname}#/p/${group.code}`
   const wa = `https://wa.me/?text=${encodeURIComponent(`Sumate a "${group.name}" y mandá tu jugada: ${link}`)}`
@@ -54,7 +63,7 @@ export default function GroupPage() {
         ))}
       </nav>
       {tab === 'participantes' && <Participants entries={entries} matches={matches} preds={preds} reload={load} />}
-      {tab === 'partidos' && <MatchesAdmin groupId={group.id} matches={matches} reload={load} />}
+      {tab === 'partidos' && <MatchesAdmin group={group} matches={matches} reload={load} />}
       {tab === 'ranking' && <Ranking key={rk} groupId={group.id} finished={isFinished(matches)} />}
     </>
   )
@@ -118,7 +127,8 @@ function Participants({ entries, matches, preds, reload }: { entries: Entry[]; m
   )
 }
 
-function MatchesAdmin({ groupId, matches, reload }: { groupId: string; matches: Match[]; reload: () => void }) {
+function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match[]; reload: () => void }) {
+  const groupId = group.id
   const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
   const [err, setErr] = useState('')
 
@@ -143,8 +153,9 @@ function MatchesAdmin({ groupId, matches, reload }: { groupId: string; matches: 
 
   return (
     <>
+      <AutoImport group={group} reload={reload} />
       <form className="card" onSubmit={add}>
-        <h3>Agregar partido</h3>
+        <h3>Agregar partido a mano</h3>
         <input placeholder="Fecha / ronda (ej: Fecha 12)" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
         <input placeholder="Local" value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required />
         <input placeholder="Visitante" value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required />
@@ -165,11 +176,11 @@ function ResultRow({ m, onSave, onDelete }: { m: Match; onSave: (m: Match, h: st
     <div className="card">
       <div className="muted small">{m.round ? `${m.round} · ` : ''}{fmtDate(m.kickoff)}</div>
       <div className="teams">
-        <span className="team">{m.home}</span>
+        <span className="team"><Crest url={m.home_logo} />{m.home}</span>
         <input className="score" type="number" min={0} inputMode="numeric" value={h} onChange={(e) => setH(e.target.value)} />
         <span>-</span>
         <input className="score" type="number" min={0} inputMode="numeric" value={a} onChange={(e) => setA(e.target.value)} />
-        <span className="team right">{m.away}</span>
+        <span className="team right">{m.away}<Crest url={m.away_logo} /></span>
       </div>
       <button className="primary small" onClick={() => onSave(m, h, a)}>Guardar resultado</button>{' '}
       <button className="link" onClick={() => onDelete(m)}>Eliminar</button>
