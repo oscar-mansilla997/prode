@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
+import { ask } from '../dialogs'
 import { Crest, GroupRanking, fmtDate } from '../components'
 
 type Draft = Record<string, { h: string; a: string }>
@@ -103,7 +104,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
 
   async function send() {
     if (missing.length) return setErr(`Te faltan ${missing.length} partido(s) por completar.`)
-    if (!confirm('Una vez enviada, no podés cambiar tu jugada. ¿Enviar?')) return
+    if (!(await ask('Una vez enviada no podés cambiar tu jugada.', { title: '¿Enviar tu jugada?', ok: 'Enviar', cancel: 'Revisar' }))) return
     setBusy(true); setErr('')
     let en: Entry
     try { en = await ensureEntry() } catch (x) { setBusy(false); return setErr((x as Error).message) }

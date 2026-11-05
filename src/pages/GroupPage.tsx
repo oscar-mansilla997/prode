@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { feeNum, isFinished, money, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
+import { ask, notice } from '../dialogs'
 import { uploadCrest } from '../upload'
 import AutoImport, { importNext, refreshResults } from './AutoImport'
 
@@ -85,9 +86,9 @@ export default function GroupPage() {
             <button className="danger" onClick={async () => {
               const n = entries.filter((e) => e.status === 'approved').length
               const msg = n > 0 ? `Este campeonato tiene ${n} jugador(es) con pago confirmado. ¿Eliminar "${group.name}" igual?` : `¿Eliminar "${group.name}"?`
-              if (!confirm(msg)) return
+              if (!(await ask(msg, { title: 'Eliminar campeonato', ok: 'Eliminar', danger: true }))) return
               const { error } = await supabase.from('groups').delete().eq('id', group.id)
-              if (error) return alert(error.message)
+              if (error) return void notice(error.message)
               nav('/admin')
             }}>Eliminar campeonato</button>
           </div>
@@ -109,7 +110,7 @@ function Participants({ entries, matches, preds, reload }: { entries: Entry[]; m
     reload()
   }
   async function remove(e: Entry) {
-    if (!confirm(`¿Eliminar a ${e.profile?.name}?`)) return
+    if (!(await ask(`¿Eliminar a ${e.profile?.name}?`, { ok: 'Eliminar', danger: true }))) return
     await supabase.from('entries').delete().eq('id', e.id)
     reload()
   }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { DEMO, money, supabase, type Entry, type Group, type Profile } from '../supabase'
 import { Avatar, PredList } from '../components'
 import { LEAGUES, importNext } from './AutoImport'
+import { ask } from '../dialogs'
 import { uploadCrest } from '../upload'
 
 type Req = Entry & { profile: Profile; group: { id: string; name: string; fee: string | null; logo: string | null } }
@@ -64,7 +65,7 @@ export default function Admin() {
     await load(); setBusy(false)
   }
   async function removeGroup(g: Group) {
-    if (!confirm(`¿Eliminar "${g.name}"? Se borran sus partidos, jugadas y ranking.`)) return
+    if (!(await ask('Se borran sus partidos, jugadas y ranking. No se puede deshacer.', { title: `¿Eliminar "${g.name}"?`, ok: 'Eliminar', danger: true }))) return
     setBusy(true); setErr('')
     const { error } = await supabase.from('groups').delete().eq('id', g.id)
     if (error) setErr(error.message)
@@ -263,7 +264,7 @@ function Equipos() {
     setBusy(false)
   }
   async function remove(t: T) {
-    if (!confirm(`¿Borrar ${t.name}?`)) return
+    if (!(await ask(`Se borra ${t.name} de tu lista de equipos.`, { title: '¿Borrar equipo?', ok: 'Borrar', danger: true }))) return
     await supabase.from('teams').delete().eq('id', t.id)
     load()
   }

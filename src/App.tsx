@@ -10,6 +10,7 @@ import Player from './pages/Player'
 import Profile from './pages/Profile'
 import Bell from './Bell'
 import Brand from './Brand'
+import { Dialogs } from './dialogs'
 import NewPassword from './pages/NewPassword'
 import Admin from './pages/Admin'
 import RankingPage from './pages/RankingPage'
@@ -75,6 +76,7 @@ export default function App() {
 
   return (
     <>
+      <Dialogs />
       <header className="topbar">
         <Link to="/" className="brand"><Brand /></Link>
         <div className="right"><Bell /></div>
