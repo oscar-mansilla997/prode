@@ -45,7 +45,7 @@ export default function Admin() {
     setPct(String(v))
     let blocked = 0
     for (const g of groups) {
-      if (Number(g.commission_pct) === v) continue
+      if (g.finish_notified || Number(g.commission_pct) === v) continue
       const { error } = await supabase.from('groups').update({ commission_pct: v }).eq('id', g.id)
       if (error) blocked++
     }
@@ -145,7 +145,7 @@ export default function Admin() {
               <span>Porcentaje que te queda de cada pozo</span>
               <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} /> %</span>
             </div>
-            <p className="small muted">Se descuenta del total recaudado: el resto es el premio. Solo se puede cambiar antes de que arranque una fecha o cuando terminó. Ej: 4 jugadores × $5.000 con 10% → pozo $18.000 y te quedan $2.000.</p>
+            <p className="small muted">Vale para cada fecha: se descuenta del total recaudado y el resto es el premio. Se aplica a las fechas que todavía no empezaron, y las siguientes se abren con el mismo porcentaje. No cambia las fechas en juego ni las ya terminadas. Ej: 4 jugadores × $5.000 con 10% → pozo $18.000 y te quedan $2.000.</p>
             <button className="primary small" onClick={savePct}>Guardar</button>
             {pctMsg && <span className="small muted"> {pctMsg}</span>}
           </div>

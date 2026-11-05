@@ -17,7 +17,7 @@ export default function GroupPage() {
   const [preds, setPreds] = useState<Prediction[]>([])
   const [tab, setTab] = useState<Tab>('participantes')
   const [rk, setRk] = useState(0)
-  const locked = matches.some((m) => new Date(m.kickoff) <= new Date() && m.home_score === null)
+  const locked = !!group?.finish_notified || matches.some((m) => new Date(m.kickoff) <= new Date() && m.home_score === null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -258,7 +258,7 @@ function PotCard({ group, locked, approved, reload }: { group: Group; locked: bo
       <div className="row"><span>Tu porcentaje</span>
         <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" disabled={locked} value={pct} onChange={(e) => setPct(e.target.value)} onBlur={save} /> % = <strong>{money(mine)}</strong></span></div>
       <div className="row total"><span>Pozo para el ganador</span><strong>{money(gross - mine)}</strong></div>
-      {locked && <p className="small muted">Hay una fecha en juego: el porcentaje se puede cambiar de nuevo cuando termine.</p>}
+      {locked && <p className="small muted">Esta fecha está en juego o ya terminó: el porcentaje y el valor ya no se pueden cambiar.</p>}
       {msg && <span className="small muted">{msg}</span>}
     </div>
   )
@@ -292,7 +292,7 @@ function SettingsCard({ group, locked, reload }: { group: Group; locked: boolean
       </div>
       <label className="small muted">Nombre</label>
       <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
-      <label className="small muted">Valor de la jugada{locked && ' (bloqueado: hay una fecha en juego)'}</label>
+      <label className="small muted">Valor de la jugada{locked && ' (bloqueado)'}</label>
       <input value={v.fee} placeholder="ej: $5000" disabled={locked} onChange={(e) => setV({ ...v, fee: e.target.value })} />
       <label className="small muted">Alias para transferir</label>
       <input value={v.pay_alias} onChange={(e) => setV({ ...v, pay_alias: e.target.value })} />
