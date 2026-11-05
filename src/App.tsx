@@ -26,7 +26,8 @@ export default function App() {
       try {
         const g = await supabase.from('groups').select('id').eq('owner_id', session.user.id)
         const ids = ((g.data as { id: string }[]) ?? []).map((x) => x.id)
-        setOwner(ids.length > 0)
+        const a = await supabase.rpc('is_admin')
+        setOwner(a.data === true)
         if (!ids.length) return setPending(0)
         const r = await supabase.from('entries').select('id, submitted_at').in('group_id', ids).eq('status', 'pending')
         setPending(((r.data as { submitted_at: string | null }[]) ?? []).filter((x) => x.submitted_at).length)
