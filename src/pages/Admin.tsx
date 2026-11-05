@@ -48,7 +48,8 @@ export default function Admin() {
   }
   async function setActive(g: Group, active: boolean) {
     setBusy(true)
-    await supabase.from('groups').update({ active }).eq('id', g.id)
+    const { error } = await supabase.from('groups').update({ active }).eq('id', g.id)
+    if (error) setErr(error.message)
     await load(); setBusy(false)
   }
   async function toggleLeague(l: { id: number; name: string }, g?: Group) {
@@ -56,10 +57,17 @@ export default function Admin() {
     setBusy(true); setErr('')
     const base = groups[0]
     const { data, error } = await supabase.from('groups')
-      .insert({ name: `Prode ${l.name}`, fee: base?.fee ?? null, pay_alias: base?.pay_alias ?? null, commission_pct: base?.commission_pct ?? 0 })
+      .insert({ name: `Prode ${l.name}`, league_id: l.id, fee: base?.fee ?? null, pay_alias: base?.pay_alias ?? null, commission_pct: base?.commission_pct ?? 0 })
       .select().single()
     if (error) { setBusy(false); return setErr(error.message) }
     try { await importNext((data as Group).id, l.id) } catch { /* se reintenta al abrir el campeonato */ }
+    await load(); setBusy(false)
+  }
+  async function removeGroup(g: Group) {
+    if (!confirm(`¿Eliminar "${g.name}"? Se borran sus partidos, jugadas y ranking.`)) return
+    setBusy(true); setErr('')
+    const { error } = await supabase.from('groups').delete().eq('id', g.id)
+    if (error) setErr(error.message)
     await load(); setBusy(false)
   }
   async function createCustom(e: React.FormEvent) {
@@ -121,23 +129,30 @@ export default function Admin() {
             <button className="primary small" onClick={savePct}>Guardar</button>
             {pctMsg && <span className="small muted"> {pctMsg}</span>}
           </div>
-          <p className="small muted">Prendé los campeonatos que querés ofrecer. Al prender uno nuevo, trae solo los partidos y el logo.</p>
-          {LEAGUES.map((l) => {
-            const g = groups.find((x) => x.league_id === l.id)
-            return (
-              <div key={l.id} className="card row">
-                {g ? <Link to={`/g/${g.id}`} className="link" style={{ color: 'var(--txt)' }}><strong>{l.name}</strong> <span className="muted small">Administrar ›</span></Link> : <strong>{l.name}</strong>}
-                <button className={`toggle ${g?.active ? 'on' : ''}`} disabled={busy} onClick={() => toggleLeague(l, g)}>{g?.active ? 'Activo' : 'Apagado'}</button>
+          {err && <p className="msg">{err}</p>}
+          <h3>Tus campeonatos</h3>
+          {groups.length === 0 && <p className="empty">No tenés campeonatos. Agregá una liga acá abajo.</p>}
+          {groups.map((g) => (
+            <div key={g.id} className="card">
+              <div className="row">
+                <span className="who">{g.logo ? <img className="crest" style={{ width: 34, height: 34 }} src={g.logo} alt="" /> : <span className="pos">?</span>}
+                  <span><strong>{g.name}</strong><div className="small muted" style={{ margin: 0 }}>{LEAGUES.find((l) => l.id === g.league_id)?.name ?? 'Campeonato propio'}</div></span></span>
+                <button className={`toggle ${g.active ? 'on' : ''}`} disabled={busy} onClick={() => setActive(g, !g.active)}>{g.active ? 'Visible' : 'Oculto'}</button>
               </div>
-            )
-          })}
-          {groups.filter((g) => !LEAGUES.some((l) => groups.find((x) => x.league_id === l.id)?.id === g.id)).map((g) => (
-            <div key={g.id} className="card row">
-              <Link to={`/g/${g.id}`} className="link" style={{ color: 'var(--txt)' }}><strong>{g.name}</strong> <span className="muted small">Administrar ›</span></Link>
-              <button className={`toggle ${g.active ? 'on' : ''}`} disabled={busy} onClick={() => setActive(g, !g.active)}>{g.active ? 'Activo' : 'Apagado'}</button>
+              <div className="actions">
+                <Link to={`/g/${g.id}`} className="link">Administrar ›</Link>
+                <button className="danger" disabled={busy} onClick={() => removeGroup(g)}>Eliminar</button>
+              </div>
             </div>
           ))}
-          {err && <p className="msg">{err}</p>}
+          <h3>Agregar una liga</h3>
+          <p className="small muted">Trae sola los partidos y el logo. Las que ya tenés no aparecen acá.</p>
+          {LEAGUES.filter((l) => !groups.some((g) => g.league_id === l.id)).map((l) => (
+            <div key={l.id} className="card row">
+              <strong>{l.name}</strong>
+              <button className="primary small" disabled={busy} onClick={() => toggleLeague(l)}>Agregar</button>
+            </div>
+          ))}
           {!creating ? <button className="ghost" onClick={() => setCreating(true)}>Crear campeonato propio (armo equipos y partidos)</button> : (
             <form className="card" onSubmit={createCustom}>
               <h3>Campeonato propio</h3>
