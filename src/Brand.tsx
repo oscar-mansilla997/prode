@@ -1,6 +1,6 @@
 import goat from './assets/cabra.svg'
 
-export default function Brand({ size = 34 }: { size?: number }) {
+export default function Brand({ size = 52 }: { size?: number }) {
   return (
     <span className="brandmark">
       <img src={goat} alt="" style={{ height: size }} />
