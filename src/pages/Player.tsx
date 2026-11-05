@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { isFinished, money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
-import { Avatar, Crest, Ranking, fmtDate } from '../components'
+import { Crest, Ranking, fmtDate } from '../components'
 
 type Draft = Record<string, { h: string; a: string }>
 
@@ -9,7 +9,6 @@ export default function Player({ profile }: { profile: Profile }) {
   const { code } = useParams()
   const [group, setGroup] = useState<PubGroup | null | undefined>(undefined)
   const [entry, setEntry] = useState<Entry | null | undefined>(undefined)
-  const [err, setErr] = useState('')
 
   useEffect(() => {
     ;(async () => {
@@ -23,10 +22,12 @@ export default function Player({ profile }: { profile: Profile }) {
     })()
   }, [code, profile.id])
 
-  async function join() {
+  async function ensureEntry(): Promise<Entry> {
+    if (entry) return entry
     const { data, error } = await supabase.from('entries').insert({ group_id: group!.id }).select().single()
-    if (error) return setErr(error.message)
+    if (error) throw new Error(error.message)
     setEntry(data as Entry)
+    return data as Entry
   }
 
   if (group === undefined) return <p className="muted">Cargando…</p>
@@ -42,35 +43,27 @@ export default function Player({ profile }: { profile: Profile }) {
         <div className="potbox">💰 Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>
       </div>
       {entry === undefined ? <p className="muted">Cargando…</p>
-        : entry === null ? (
-          <div className="card">
-            <h3>Tus datos</h3>
-            <div className="who"><Avatar url={profile.avatar_url} name={profile.name || '?'} size={48} />
-              <div><strong>{profile.name}</strong><div className="small muted">{profile.phone} · alias {profile.alias}</div></div></div>
-            <p className="small muted">El organizador va a ver estos datos para confirmar tu pago.</p>
-            {complete ? <button className="primary" onClick={join}>Anotarme y cargar mi jugada</button>
-              : <Link to="/perfil" className="link">Completá tu perfil primero</Link>}
-            <div><Link to="/perfil" className="link">Editar perfil / foto</Link></div>
-            {err && <p className="msg">{err}</p>}
-          </div>
-        ) : <Jugada group={group} entry={entry} profile={profile} onChange={setEntry} />}
+        : !complete ? (
+          <div className="card"><p>Completá tu perfil una sola vez para poder jugar.</p><Link to="/perfil" className="link">Ir a mi perfil</Link></div>
+        ) : <Jugada group={group} entry={entry} ensureEntry={ensureEntry} profile={profile} onChange={setEntry} />}
     </>
   )
 }
 
-function Jugada({ group, entry, profile, onChange }: { group: PubGroup; entry: Entry; profile: Profile; onChange: (e: Entry) => void }) {
+function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGroup; entry: Entry | null; ensureEntry: () => Promise<Entry>; profile: Profile; onChange: (e: Entry) => void }) {
+  const [showPay, setShowPay] = useState(false)
   const [matches, setMatches] = useState<Match[]>([])
   const [draft, setDraft] = useState<Draft>({})
   const [loaded, setLoaded] = useState(false)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const sent = !!entry.submitted_at
+  const sent = !!entry?.submitted_at
 
   useEffect(() => {
     ;(async () => {
       const [m, p] = await Promise.all([
         supabase.from('matches').select('*').eq('group_id', group.id).order('kickoff'),
-        supabase.from('predictions').select('*').eq('entry_id', entry.id),
+        entry ? supabase.from('predictions').select('*').eq('entry_id', entry.id) : Promise.resolve({ data: [] }),
       ])
       setMatches((m.data as Match[]) ?? [])
       const d: Draft = {}
@@ -79,16 +72,16 @@ function Jugada({ group, entry, profile, onChange }: { group: PubGroup; entry: E
       setDraft(d)
       setLoaded(true)
     })()
-  }, [group.id, entry.id])
+  }, [group.id, entry?.id])
 
   const upd = (id: string, k: 'h' | 'a', v: string) => setDraft((d) => ({ ...d, [id]: { h: d[id]?.h ?? '', a: d[id]?.a ?? '', [k]: v } }))
   const open = matches.filter((m) => new Date(m.kickoff) > new Date())
   const missing = open.filter((m) => draft[m.id]?.h === undefined || draft[m.id]?.h === '' || draft[m.id]?.a === undefined || draft[m.id]?.a === '')
 
-  async function saveDraft() {
+  async function saveDraft(en: Entry) {
     const rows = open
       .filter((m) => draft[m.id]?.h !== undefined && draft[m.id]?.h !== '' && draft[m.id]?.a !== undefined && draft[m.id]?.a !== '')
-      .map((m) => ({ entry_id: entry.id, match_id: m.id, home_pred: +draft[m.id].h, away_pred: +draft[m.id].a }))
+      .map((m) => ({ entry_id: en.id, match_id: m.id, home_pred: +draft[m.id].h, away_pred: +draft[m.id].a }))
     if (!rows.length) return null
     const { error } = await supabase.from('predictions').upsert(rows)
     return error
@@ -96,7 +89,8 @@ function Jugada({ group, entry, profile, onChange }: { group: PubGroup; entry: E
 
   async function saveOnly() {
     setBusy(true); setErr('')
-    const error = await saveDraft()
+    let error
+    try { error = await saveDraft(await ensureEntry()) } catch (x) { error = x as Error }
     setBusy(false)
     setErr(error ? error.message : 'Borrador guardado ✓')
   }
@@ -105,30 +99,33 @@ function Jugada({ group, entry, profile, onChange }: { group: PubGroup; entry: E
     if (missing.length) return setErr(`Te faltan ${missing.length} partido(s) por completar.`)
     if (!confirm('Una vez enviada, no podés cambiar tu jugada. ¿Enviar?')) return
     setBusy(true); setErr('')
-    const e1 = await saveDraft()
+    let en: Entry
+    try { en = await ensureEntry() } catch (x) { setBusy(false); return setErr((x as Error).message) }
+    const e1 = await saveDraft(en)
     if (e1) { setBusy(false); return setErr(e1.message) }
-    const { data, error } = await supabase.from('entries').update({ submitted_at: new Date().toISOString() }).eq('id', entry.id).select().single()
+    const { data, error } = await supabase.from('entries').update({ submitted_at: new Date().toISOString() }).eq('id', en.id).select().single()
     setBusy(false)
     if (error) return setErr(error.message)
     onChange(data as Entry)
+    setShowPay(true)
   }
 
   return (
     <>
       {sent ? (
         <div className="card">
-          <div className="row"><strong>Hola {profile.name}</strong><span className={`pill s-${entry.status}`}>{statusLabel[entry.status]}</span></div>
+          <div className="row"><strong>Hola {profile.name}</strong><span className={`pill s-${entry!.status}`}>{statusLabel[entry!.status]}</span></div>
           <p className="small">
-            {entry.status === 'approved' && 'Tu jugada está aprobada. ¡Ya estás compitiendo!'}
-            {entry.status === 'pending' && 'Jugada enviada. Para que entre a la competencia, el organizador tiene que confirmar tu transferencia.'}
-            {entry.status === 'rejected' && 'El organizador rechazó tu jugada. Contactalo para resolverlo.'}
+            {entry!.status === 'approved' && 'Tu jugada está aprobada. ¡Ya estás compitiendo!'}
+            {entry!.status === 'pending' && 'Jugada enviada. Para que entre a la competencia, el organizador tiene que confirmar tu transferencia.'}
+            {entry!.status === 'rejected' && 'El organizador rechazó tu jugada. Contactalo para resolverlo.'}
           </p>
         </div>
       ) : (
         <p className="muted small">Completá tus resultados y enviá la jugada. Después no se puede modificar.</p>
       )}
 
-      {entry.status !== 'approved' && (group.fee || group.pay_alias) && (
+      {sent && entry!.status !== 'approved' && (group.fee || group.pay_alias) && (
         <div className="card pay">
           <h3>💳 Pago</h3>
           {group.fee && <div>Valor de la jugada: <strong>{group.fee}</strong></div>}
@@ -155,7 +152,7 @@ function Jugada({ group, entry, profile, onChange }: { group: PubGroup; entry: E
               </div>
               {m.home_score !== null && (
                 <div className="small">Resultado: <strong>{m.home_score} - {m.away_score}</strong>
-                  {pts !== null && entry.status === 'approved' && <span className={`pill p${pts}`}>{pts} pts</span>}</div>
+                  {pts !== null && entry?.status === 'approved' && <span className={`pill p${pts}`}>{pts} pts</span>}</div>
               )}
               {!sent && locked && <div className="small muted">Partido ya empezado, no se puede pronosticar.</div>}
             </div>
@@ -169,6 +166,25 @@ function Jugada({ group, entry, profile, onChange }: { group: PubGroup; entry: E
         </>
       )}
       {err && <p className="msg">{err}</p>}
+
+      {showPay && (
+        <div className="modal-bg" onClick={() => setShowPay(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>✅ ¡Jugada enviada!</h2>
+            <p>Para entrar a la competencia, transferí:</p>
+            {group.fee && <div className="big">{group.fee}</div>}
+            {group.pay_alias && (
+              <>
+                <p className="small muted">al alias</p>
+                <div className="big code">{group.pay_alias}</div>
+                <button className="primary" onClick={() => navigator.clipboard?.writeText(group.pay_alias!)}>Copiar alias</button>
+              </>
+            )}
+            <p className="small muted">Cuando el organizador confirme tu pago, te llega un aviso en la campanita 🔔 y ya competís.</p>
+            <button className="ghost" onClick={() => setShowPay(false)}>Listo</button>
+          </div>
+        </div>
+      )}
 
       {sent && (
         <>

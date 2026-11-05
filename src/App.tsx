@@ -8,6 +8,7 @@ import Groups from './pages/Groups'
 import GroupPage from './pages/GroupPage'
 import Player from './pages/Player'
 import Profile from './pages/Profile'
+import Bell from './Bell'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -48,6 +49,7 @@ export default function App() {
       <header className="topbar">
         <Link to="/" className="brand">⚽ Prode</Link>
         <div className="right">
+          <Bell />
           <Link to="/perfil"><Avatar url={profile.avatar_url} name={profile.name || '?'} size={32} /></Link>
           <button className="link" onClick={() => supabase.auth.signOut()}>Salir</button>
         </div>

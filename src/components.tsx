@@ -11,7 +11,7 @@ export function Ranking({ groupId, finished, pot }: { groupId: string; finished:
   useEffect(() => {
     const pull = () => supabase.rpc('get_leaderboard', { gid: groupId }).then(({ data }) => setRows((data as Row[]) ?? []))
     pull()
-    const t = setInterval(pull, 60000) // se refresca solo cada minuto
+    const t = setInterval(pull, 20000) // se refresca solo cada 20 segundos
     return () => clearInterval(t)
   }, [groupId])
   if (rows === null) return <p className="muted">Cargando…</p>
