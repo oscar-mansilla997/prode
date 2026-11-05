@@ -5,6 +5,21 @@ if (!enabled) {
   console.log('Sin SUPABASE_ACCESS_TOKEN: nada para hacer.')
   process.exit(0)
 }
+// Completa logo/torneo en prodes que todavía no lo tienen (asume Liga Profesional si ya tenían partidos importados)
+await sql(`update groups g set league_id = 4406 where g.league_id is null
+  and exists (select 1 from matches m where m.group_id = g.id and m.external_id is not null)`)
+const noLogo = await sql(`select distinct league_id from groups where league_id is not null and (logo is null or season is null)`)
+for (const { league_id } of noLogo) {
+  const id = Number(league_id)
+  if (!Number.isInteger(id)) continue
+  const r = await fetch(`https://www.thesportsdb.com/api/v1/json/123/lookupleague.php?id=${id}`)
+  const l = r.ok ? (await r.json()).leagues?.[0] : null
+  if (!l) continue
+  const logo = String(l.strBadge ?? '').replace(/'/g, '')
+  const season = String(l.strCurrentSeason ?? '').replace(/'/g, '')
+  await sql(`update groups set logo = coalesce(logo, nullif('${logo}','')), season = coalesce(season, nullif('${season}',''))
+    where league_id = ${id} and (logo is null or season is null)`)
+}
 const rows = await sql(`
   select m.external_id, m.round, g.league_id, g.season
   from matches m join groups g on g.id = m.group_id
