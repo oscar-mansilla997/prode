@@ -44,15 +44,19 @@ export default function Login() {
         )}
         {mode === 'up' && (
           <>
+            <label className="lbl">Nombre y apellido</label>
             <input placeholder="Nombre y apellido" value={f.name} onChange={set('name')} required />
+            <label className="lbl">Teléfono (WhatsApp)</label>
             <input type="tel" placeholder="Número de teléfono" value={f.phone} onChange={set('phone')} required />
-            <input placeholder="Tu alias (desde donde transferís)" value={f.alias} onChange={set('alias')} required />
+            <label className="lbl">Tu alias (desde donde transferís)</label>
+            <input placeholder="Tu alias" value={f.alias} onChange={set('alias')} required />
             <label className="small muted">Fecha de nacimiento</label>
             <input type="date" value={f.birth_date} onChange={set('birth_date')} required />
           </>
         )}
+        <label className="lbl">Email</label>
         <input type="email" placeholder="Email" value={f.email} onChange={set('email')} required />
-        {mode !== 'forgot' && <input type="password" placeholder={mode === 'up' ? 'Contraseña (mín. 8)' : 'Contraseña'} minLength={mode === 'up' ? 8 : 6} value={f.password} onChange={set('password')} required />}
+        {mode !== 'forgot' && <><label className="lbl">Contraseña</label><input type="password" placeholder={mode === 'up' ? 'Contraseña (mín. 8)' : 'Contraseña'} minLength={mode === 'up' ? 8 : 6} value={f.password} onChange={set('password')} required /></>}
         {mode === 'forgot' && <p className="small muted">Escribí tu mail y te enviamos un link para elegir una contraseña nueva.</p>}
         <button className="primary" disabled={busy}>{mode === 'in' ? 'Ingresar' : mode === 'up' ? 'Crear cuenta' : 'Enviarme el mail'}</button>
         {msg && <p className="msg">{msg}</p>}

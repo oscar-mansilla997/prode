@@ -196,13 +196,17 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
         <h3>Agregar partido</h3>
         {teams.length < 2 ? <p className="small muted">Primero cargá al menos dos equipos con su escudo en <strong>Admin → Equipos</strong>.</p> : (
           <>
-            <input placeholder="Fecha / ronda (ej: Fecha 1)" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
+            <label className="lbl">Fecha o ronda</label>
+            <input placeholder="Ej: Fecha 1" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
+            <label className="lbl">Equipo local</label>
             <select value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required>
               <option value="">Local…</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
+            <label className="lbl">Equipo visitante</label>
             <select value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required>
               <option value="">Visitante…</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
+            <label className="lbl">Día y hora del partido</label>
             <input type="datetime-local" value={f.kickoff} onChange={(e) => setF({ ...f, kickoff: e.target.value })} required />
             <button className="primary">Agregar partido</button>
           </>

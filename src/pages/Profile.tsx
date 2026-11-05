@@ -92,7 +92,8 @@ function ChangePassword() {
   return (
     <form className="card" onSubmit={save}>
       <h3>Cambiar contraseña</h3>
-      <input type="password" placeholder="Contraseña nueva (mín. 8)" minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} required />
+      <label className="lbl">Contraseña nueva (mínimo 8 caracteres)</label>
+      <input type="password" placeholder="Contraseña nueva" minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} required />
       <button className="ghost">Cambiar contraseña</button>
       {msg && <p className="msg">{msg}</p>}
     </form>

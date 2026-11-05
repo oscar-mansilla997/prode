@@ -18,7 +18,8 @@ export default function NewPassword({ onDone }: { onDone: () => void }) {
       <form className="card" onSubmit={save}>
         <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 14px' }}><Brand size={64} /></div>
         <h3>Elegí tu contraseña nueva</h3>
-        <input type="password" placeholder="Contraseña nueva (mín. 8)" minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} required />
+        <label className="lbl">Contraseña nueva (mínimo 8 caracteres)</label>
+        <input type="password" placeholder="Contraseña nueva" minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} required />
         <button className="primary" disabled={busy}>Guardar y entrar</button>
         {msg && <p className="msg">{msg}</p>}
       </form>

@@ -170,12 +170,16 @@ export default function Admin() {
           {!creating ? <button className="ghost" onClick={() => setCreating(true)}>Crear campeonato propio (armo equipos y partidos)</button> : (
             <form className="card" onSubmit={createCustom}>
               <h3>Campeonato propio</h3>
-              <input placeholder="Nombre (ej: Copa de los Amigos)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
-              <label className="small muted">Logo del campeonato (opcional)</label>
+              <label className="lbl">Nombre del campeonato</label>
+              <input placeholder="Ej: Copa de los Amigos" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
+              <label className="lbl">Logo del campeonato (opcional)</label>
               <input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
-              <input placeholder="Valor de la jugada (ej: $5000)" value={f.fee} onChange={(e) => setF({ ...f, fee: e.target.value })} />
-              <input type="number" min={0} max={100} inputMode="decimal" placeholder="Tu porcentaje del pozo" value={f.pct} onChange={(e) => setF({ ...f, pct: e.target.value })} />
-              <input placeholder="Alias para recibir la transferencia" value={f.pay_alias} onChange={(e) => setF({ ...f, pay_alias: e.target.value })} />
+              <label className="lbl">Valor de la jugada</label>
+              <input placeholder="Ej: $5000" value={f.fee} onChange={(e) => setF({ ...f, fee: e.target.value })} />
+              <label className="lbl">Tu porcentaje del pozo (%)</label>
+              <input type="number" min={0} max={100} inputMode="decimal" placeholder="Ej: 10" value={f.pct} onChange={(e) => setF({ ...f, pct: e.target.value })} />
+              <label className="lbl">Tu alias para recibir las transferencias</label>
+              <input placeholder="Alias" value={f.pay_alias} onChange={(e) => setF({ ...f, pay_alias: e.target.value })} />
               <button className="primary" disabled={busy}>Crear</button>
               <button type="button" className="link" onClick={() => setCreating(false)}>Cancelar</button>
             </form>
@@ -237,7 +241,8 @@ function Usuarios() {
   const list = l.filter((u) => !t || `${u.name} ${u.phone} ${u.alias}`.toLowerCase().includes(t))
   return (
     <>
-      <input placeholder={`Buscar entre ${l.length} usuarios`} value={q} onChange={(e) => setQ(e.target.value)} />
+      <label className="lbl">Buscar usuario</label>
+      <input placeholder={`Nombre, alias o teléfono (${l.length} usuarios)`} value={q} onChange={(e) => setQ(e.target.value)} />
       {list.map((u) => (
         <div key={u.id} className="card">
           <div className="row">
@@ -285,8 +290,9 @@ function Equipos() {
     <>
       <p className="small muted">Cargá tus equipos una vez, con su escudo, y después los elegís al armar los partidos de un campeonato propio.</p>
       <form className="card" onSubmit={add}>
-        <input placeholder="Nombre del equipo" value={name} onChange={(e) => setName(e.target.value)} required />
-        <label className="small muted">Escudo (imagen)</label>
+        <label className="lbl">Nombre del equipo</label>
+        <input placeholder="Ej: Los Pumas" value={name} onChange={(e) => setName(e.target.value)} required />
+        <label className="lbl">Escudo (imagen)</label>
         <input id="crest-file" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <button className="primary" disabled={busy}>{busy ? 'Subiendo…' : 'Agregar equipo'}</button>
         {err && <p className="msg">{err}</p>}
