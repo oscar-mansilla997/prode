@@ -35,7 +35,7 @@ export default function Player({ profile }: { profile: Profile }) {
   if (group === undefined) return <p className="muted">Cargando…</p>
   if (group === null) return <div className="card"><h2>Link inválido</h2><p className="muted">Revisá el link que te pasó el organizador.</p></div>
   if (group.active === false && !entry) return <div className="card"><h2>{group.name}</h2><p className="muted">Este prode no está disponible por ahora.</p></div>
-  const complete = profile.name && profile.phone && profile.alias && profile.birth_date
+  const complete = profile.name && profile.phone && profile.alias
 
   return (
     <>

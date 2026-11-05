@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase, type Profile as P } from '../supabase'
 import { Avatar } from '../components'
+import { toast } from '../dialogs'
 
 // Reduce la foto a 256px para que suba rápido
 async function shrink(file: File): Promise<Blob> {
@@ -21,9 +22,13 @@ export default function Profile({ profile, onSaved }: { profile: P; onSaved: () 
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    const { error } = await supabase.from('profiles').update({ ...f, birth_date: f.birth_date || null }).eq('id', profile.id)
-    setMsg(error ? error.message : 'Guardado ✓')
-    if (!error) onSaved()
+    setMsg('')
+    const clean = { name: f.name.trim(), phone: f.phone.trim(), alias: f.alias.trim() }
+    if (!clean.name || !clean.phone || !clean.alias) return setMsg('Completá nombre, teléfono y alias.')
+    const { error } = await supabase.from('profiles').update({ ...clean, birth_date: f.birth_date || null }).eq('id', profile.id)
+    if (error) return setMsg('No se pudo guardar: ' + error.message)
+    toast('Perfil guardado ✓')
+    onSaved()
   }
 
   async function photo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -58,11 +63,14 @@ export default function Profile({ profile, onSaved }: { profile: P; onSaved: () 
         </div>
       </div>
       <form className="card" onSubmit={save}>
-        <input placeholder="Nombre y apellido" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
-        <input type="tel" placeholder="Teléfono" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} required />
-        <input placeholder="Alias" value={f.alias} onChange={(e) => setF({ ...f, alias: e.target.value })} required />
-        <label className="small muted">Fecha de nacimiento</label>
-        <input type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} required />
+        <label className="small muted">Nombre y apellido</label>
+        <input placeholder="Nombre y apellido" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+        <label className="small muted">Teléfono (WhatsApp)</label>
+        <input type="tel" placeholder="Teléfono" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+        <label className="small muted">Alias para transferir</label>
+        <input placeholder="Alias" value={f.alias} onChange={(e) => setF({ ...f, alias: e.target.value })} />
+        <label className="small muted">Fecha de nacimiento (opcional)</label>
+        <input type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} />
         <button className="primary">Guardar</button>
         {msg && <p className="msg">{msg}</p>}
       </form>
