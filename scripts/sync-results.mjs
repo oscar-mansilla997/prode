@@ -42,11 +42,16 @@ for (const { league, season, round } of rounds.values()) {
     const h = Number(e.intHomeScore), a = Number(e.intAwayScore)
     if (!id || !Number.isInteger(h) || !Number.isInteger(a)) continue
     const out = await sql(`update matches set home_score = ${h}, away_score = ${a}
-      where external_id = '${id}' and (home_score is distinct from ${h} or away_score is distinct from ${a}) returning id`)
+      where external_id = '${id}' and not score_manual and (home_score is distinct from ${h} or away_score is distinct from ${a}) returning id`)
     updated += out.length
   }
 }
 console.log(`Resultados actualizados: ${updated}`)
+
+// ---- Pasada la hora de revisión, se anuncia al ganador ----
+const due = await sql(`select id from groups where results_ready_at is not null and not finish_notified and results_ready_at + interval '60 minutes' <= now()`)
+for (const d of due) await sql(`select check_group_finished('${String(d.id).replace(/[^0-9a-f-]/gi, '')}')`)
+if (due.length) console.log(`Ganadores anunciados: ${due.length}`)
 
 // ---- Cuando una fecha termina, se abre sola la siguiente (cada fecha es su propio campeonato) ----
 const q = (v) => `'${String(v ?? '').replace(/'/g, "''")}'`

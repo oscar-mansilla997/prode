@@ -181,7 +181,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   }
   async function setResult(m: Match, hs: string, as: string) {
     const v = hs === '' || as === '' ? [null, null] : [+hs, +as]
-    await supabase.from('matches').update({ home_score: v[0], away_score: v[1] }).eq('id', m.id)
+    await supabase.from('matches').update({ home_score: v[0], away_score: v[1], score_manual: v[0] !== null }).eq('id', m.id)
     reload()
   }
   async function remove(m: Match) {
@@ -191,6 +191,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
 
   return (
     <>
+      <ReviewBanner group={group} matches={matches} reload={reload} />
       {group.league_id && <AutoImport group={group} matches={matches} reload={reload} />}
       <form className="card" onSubmit={add}>
         <h3>Agregar partido</h3>
@@ -232,8 +233,12 @@ function ResultRow({ m, onSave, onDelete }: { m: Match; onSave: (m: Match, h: st
         <input className="score" type="number" min={0} inputMode="numeric" value={a} onChange={(e) => setA(e.target.value)} />
         <span className="team right">{m.away}<Crest url={m.away_logo} /></span>
       </div>
-      <button className="primary small" onClick={() => onSave(m, h, a)}>Guardar resultado</button>{' '}
-      <button className="link" onClick={() => onDelete(m)}>Eliminar</button>
+      {m.score_manual && <div className="small" style={{ color: 'var(--gold)' }}>Resultado editado por vos: no se pisa con el automático.</div>}
+      <div className="actions">
+        <button className="primary small" onClick={() => onSave(m, h, a)}>Guardar resultado</button>
+        {m.score_manual && <button className="link" onClick={() => { setH(''); setA(''); onSave(m, '', '') }}>Volver al automático</button>}
+        <button className="link" onClick={() => onDelete(m)}>Eliminar</button>
+      </div>
     </div>
   )
 }
@@ -298,6 +303,25 @@ function SettingsCard({ group, locked, reload }: { group: Group; locked: boolean
       <input value={v.pay_alias} onChange={(e) => setV({ ...v, pay_alias: e.target.value })} />
       <button className="primary" onClick={save}>Guardar</button>
       {msg && <span className="small muted"> {msg}</span>}
+    </div>
+  )
+}
+
+function ReviewBanner({ group, matches, reload }: { group: Group; matches: Match[]; reload: () => void }) {
+  const ready = matches.length > 0 && matches.every((m) => m.home_score !== null)
+  if (!ready || group.finish_notified) return null
+  const left = group.results_ready_at ? Math.max(0, Math.ceil((new Date(group.results_ready_at).getTime() + 60 * 60000 - Date.now()) / 60000)) : 60
+  async function confirmNow() {
+    if (!(await ask('Se avisa al ganador y a los demás jugadores, y se abre la fecha siguiente.', { title: '¿Confirmar los resultados?', ok: 'Confirmar y anunciar', cancel: 'Revisar más' }))) return
+    const { error } = await supabase.rpc('confirm_results', { gid: group.id })
+    if (error) return void notice(error.message)
+    reload()
+  }
+  return (
+    <div className="card win">
+      <div className="eyebrow">Resultados completos</div>
+      <p className="small" style={{ margin: '6px 0' }}>Revisá que los resultados sean los reales. Podés corregir cualquiera abajo. El ganador se anuncia solo en <strong>{left} min</strong>, o antes si confirmás.</p>
+      <button className="primary small" onClick={confirmNow}>Confirmar y anunciar al ganador</button>
     </div>
   )
 }

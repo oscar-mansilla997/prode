@@ -48,7 +48,7 @@ async function applyScores(groupId: string, list: Ev[]) {
   for (const e of list.filter((x) => FINISHED.includes(x.strStatus ?? '') && x.intHomeScore != null && x.intAwayScore != null)) {
     await supabase.from('matches')
       .update({ home_score: Number(e.intHomeScore), away_score: Number(e.intAwayScore) })
-      .eq('group_id', groupId).eq('external_id', String(e.idEvent))
+      .eq('group_id', groupId).eq('external_id', String(e.idEvent)).eq('score_manual', false)
   }
 }
 
