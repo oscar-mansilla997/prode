@@ -18,12 +18,36 @@ export function notice(message: string, title?: string): Promise<boolean> {
   })
 }
 
+let pushToast: ((m: string) => void) | null = null
+/** Aviso chico que aparece unos segundos y se va solo. */
+export function toast(message: string) { pushToast?.(message) }
+
+/** Copia al portapapeles y avisa con un cartelito. */
+export async function copyText(text: string, what = 'Copiado') {
+  try { await navigator.clipboard.writeText(text) }
+  catch {
+    const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select()
+    try { document.execCommand('copy') } catch { /* sin permiso */ }
+    t.remove()
+  }
+  toast(`${what} ✓`)
+}
+
 export function Dialogs() {
   const [cur, setCur] = useState<Req | null>(null)
+  const [msg, setMsg] = useState<string | null>(null)
   useEffect(() => { push = setCur; return () => { push = null } }, [])
-  if (!cur) return null
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>
+    pushToast = (m) => { setMsg(m); clearTimeout(t); t = setTimeout(() => setMsg(null), 2200) }
+    return () => { pushToast = null; clearTimeout(t) }
+  }, [])
+  const toastEl = msg ? <div className="toast">{msg}</div> : null
+  if (!cur) return toastEl
   const close = (v: boolean) => { cur.resolve(v); setCur(null) }
   return (
+    <>
+    {toastEl}
     <div className="modal-bg" onClick={() => close(false)}>
       <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         {cur.title && <h2>{cur.title}</h2>}
@@ -34,5 +58,6 @@ export function Dialogs() {
         </div>
       </div>
     </div>
+    </>
   )
 }

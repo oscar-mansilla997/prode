@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { feeNum, isFinished, money, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
-import { ask, notice } from '../dialogs'
+import { ask, copyText, notice } from '../dialogs'
 import { uploadCrest } from '../upload'
 import AutoImport, { importNext, refreshResults } from './AutoImport'
 
@@ -76,7 +76,7 @@ export default function GroupPage() {
           <div className="card">
             <div className="eyebrow">Link para tus participantes</div>
             <div className="code small" style={{ wordBreak: 'break-all' }}>{link}</div>
-            <button className="link" onClick={() => navigator.clipboard?.writeText(link)}>Copiar</button>{' · '}
+            <button className="link" onClick={() => copyText(link, 'Link copiado')}>Copiar</button>{' · '}
             <a className="link" href={wa} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
           </div>
           <SettingsCard group={group} locked={locked} reload={load} />

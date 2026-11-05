@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
-import { ask } from '../dialogs'
+import { ask, copyText } from '../dialogs'
 import { Crest, GroupRanking, fmtDate } from '../components'
 
 type Draft = Record<string, { h: string; a: string }>
@@ -140,7 +140,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
           <h3>Pago pendiente</h3>
           {group.fee && <div>Valor de la jugada: <strong>{group.fee}</strong></div>}
           {group.pay_alias && <div>Transferí al alias: <strong className="code">{group.pay_alias}</strong>{' '}
-            <button className="link" onClick={() => navigator.clipboard?.writeText(group.pay_alias!)}>copiar</button></div>}
+            <button className="link" onClick={() => copyText(group.pay_alias!, 'Alias copiado')}>copiar</button></div>}
         </div>
       )}
 
@@ -190,7 +190,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
               <>
                 <p className="small muted">al alias</p>
                 <div className="big code">{group.pay_alias}</div>
-                <button className="primary" onClick={() => navigator.clipboard?.writeText(group.pay_alias!)}>Copiar alias</button>
+                <button className="primary" onClick={() => copyText(group.pay_alias!, 'Alias copiado')}>Copiar alias</button>
               </>
             )}
             <p className="small muted">Cuando el organizador confirme tu pago, te llega un aviso en la campana y ya competís.</p>
