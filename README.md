@@ -16,3 +16,5 @@ React + Vite + TypeScript + Supabase. Instalable como app (PWA).
 - El participante se anota, carga su jugada y la envía (no se puede modificar).
 - El organizador ve sus datos, confirma la transferencia y lo aprueba. Solo los aprobados puntúan.
 - Puntaje: 3 exacto, 1 ganador/empate.
+
+Publicado con GitHub Pages: https://oscar-mansilla997.github.io/prode/
