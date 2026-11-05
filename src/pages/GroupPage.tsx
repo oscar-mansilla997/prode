@@ -1,0 +1,178 @@
+import { useCallback, useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { isFinished, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
+import { Avatar, Ranking, fmtDate } from '../components'
+
+type Tab = 'participantes' | 'partidos' | 'ranking'
+
+export default function GroupPage() {
+  const { id } = useParams()
+  const [group, setGroup] = useState<Group | null>(null)
+  const [matches, setMatches] = useState<Match[]>([])
+  const [entries, setEntries] = useState<Entry[]>([])
+  const [preds, setPreds] = useState<Prediction[]>([])
+  const [tab, setTab] = useState<Tab>('participantes')
+  const [rk, setRk] = useState(0)
+
+  const load = useCallback(async () => {
+    if (!id) return
+    const [g, m, e] = await Promise.all([
+      supabase.from('groups').select('*').eq('id', id).single(),
+      supabase.from('matches').select('*').eq('group_id', id).order('kickoff'),
+      supabase.from('entries').select('*, profile:profiles(*)').eq('group_id', id).order('created_at'),
+    ])
+    const es = (e.data as Entry[]) ?? []
+    setGroup(g.data as Group)
+    setMatches((m.data as Match[]) ?? [])
+    setEntries(es)
+    if (es.length) {
+      const p = await supabase.from('predictions').select('*').in('entry_id', es.map((x) => x.id))
+      setPreds((p.data as Prediction[]) ?? [])
+    } else setPreds([])
+    setRk((n) => n + 1)
+  }, [id])
+  useEffect(() => { load() }, [load])
+
+  if (!group) return <p className="muted">Cargando…</p>
+  const link = `${location.origin}${location.pathname}#/p/${group.code}`
+  const wa = `https://wa.me/?text=${encodeURIComponent(`Sumate a "${group.name}" y mandá tu jugada: ${link}`)}`
+
+  return (
+    <>
+      <h2>{group.name}</h2>
+      <div className="card">
+        <div className="small muted">Link para tus participantes</div>
+        <div className="code small" style={{ wordBreak: 'break-all' }}>{link}</div>
+        <button className="link" onClick={() => navigator.clipboard?.writeText(link)}>Copiar</button>{' · '}
+        <a className="link" href={wa} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
+      </div>
+      <nav className="tabs">
+        {(['participantes', 'partidos', 'ranking'] as Tab[]).map((t) => (
+          <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
+            {t[0].toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </nav>
+      {tab === 'participantes' && <Participants entries={entries} matches={matches} preds={preds} reload={load} />}
+      {tab === 'partidos' && <MatchesAdmin groupId={group.id} matches={matches} reload={load} />}
+      {tab === 'ranking' && <Ranking key={rk} groupId={group.id} finished={isFinished(matches)} />}
+    </>
+  )
+}
+
+function Participants({ entries, matches, preds, reload }: { entries: Entry[]; matches: Match[]; preds: Prediction[]; reload: () => void }) {
+  const [open, setOpen] = useState<string | null>(null)
+  if (!entries.length) return <p className="muted">Todavía nadie se anotó. Compartí el link.</p>
+
+  async function setStatus(e: Entry, status: Entry['status']) {
+    await supabase.from('entries').update({ status }).eq('id', e.id)
+    reload()
+  }
+  async function remove(e: Entry) {
+    if (!confirm(`¿Eliminar a ${e.profile?.name}?`)) return
+    await supabase.from('entries').delete().eq('id', e.id)
+    reload()
+  }
+
+  const approved = entries.filter((e) => e.status === 'approved').length
+  return (
+    <>
+      <p className="muted small">{approved} aprobados de {entries.length} anotados</p>
+      {entries.map((e) => {
+        const pr = e.profile!
+        const digits = pr.phone.replace(/\D/g, '')
+        const mine = preds.filter((p) => p.entry_id === e.id)
+        return (
+          <div key={e.id} className="card">
+            <div className="row">
+              <span className="who"><Avatar url={pr.avatar_url} name={pr.name} /> <strong>{pr.name}</strong></span>
+              <span className={`pill s-${e.status}`}>{e.submitted_at ? statusLabel[e.status] : 'Sin enviar'}</span>
+            </div>
+            <div className="small">📱 <a className="link" href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer">{pr.phone}</a></div>
+            {pr.birth_date && <div className="small">🎂 {new Date(pr.birth_date + 'T00:00').toLocaleDateString('es-AR')}</div>}
+            <div className="small">💳 Alias: <strong>{pr.alias}</strong></div>
+            <div className="actions">
+              <button className="primary small" disabled={!e.submitted_at || e.status === 'approved'} onClick={() => setStatus(e, 'approved')}>Aprobar</button>
+              <button className="ghost small" disabled={e.status === 'rejected'} onClick={() => setStatus(e, 'rejected')}>Rechazar</button>
+              <button className="link" onClick={() => setOpen(open === e.id ? null : e.id)}>{open === e.id ? 'Ocultar' : 'Ver jugada'}</button>
+              <button className="link" onClick={() => remove(e)}>Eliminar</button>
+            </div>
+            {open === e.id && (
+              <div className="small">
+                {matches.map((m) => {
+                  const p = mine.find((x) => x.match_id === m.id)
+                  const pts = points(p, m)
+                  return (
+                    <div key={m.id} className="row rank">
+                      <span>{m.home} - {m.away}</span>
+                      <span>{p ? `${p.home_pred}-${p.away_pred}` : '—'}{pts !== null && <span className={`pill p${pts}`}>{pts}</span>}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+function MatchesAdmin({ groupId, matches, reload }: { groupId: string; matches: Match[]; reload: () => void }) {
+  const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
+  const [err, setErr] = useState('')
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault()
+    const { error } = await supabase.from('matches').insert({
+      group_id: groupId, round: f.round || null, home: f.home, away: f.away,
+      kickoff: new Date(f.kickoff).toISOString(),
+    })
+    setErr(error?.message ?? '')
+    if (!error) { setF({ ...f, home: '', away: '' }); reload() }
+  }
+  async function setResult(m: Match, hs: string, as: string) {
+    const v = hs === '' || as === '' ? [null, null] : [+hs, +as]
+    await supabase.from('matches').update({ home_score: v[0], away_score: v[1] }).eq('id', m.id)
+    reload()
+  }
+  async function remove(m: Match) {
+    await supabase.from('matches').delete().eq('id', m.id)
+    reload()
+  }
+
+  return (
+    <>
+      <form className="card" onSubmit={add}>
+        <h3>Agregar partido</h3>
+        <input placeholder="Fecha / ronda (ej: Fecha 12)" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
+        <input placeholder="Local" value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required />
+        <input placeholder="Visitante" value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required />
+        <input type="datetime-local" value={f.kickoff} onChange={(e) => setF({ ...f, kickoff: e.target.value })} required />
+        <button className="primary">Agregar</button>
+        {err && <p className="msg">{err}</p>}
+      </form>
+      <h3>Partidos y resultados</h3>
+      {matches.map((m) => <ResultRow key={m.id} m={m} onSave={setResult} onDelete={remove} />)}
+    </>
+  )
+}
+
+function ResultRow({ m, onSave, onDelete }: { m: Match; onSave: (m: Match, h: string, a: string) => void; onDelete: (m: Match) => void }) {
+  const [h, setH] = useState(m.home_score?.toString() ?? '')
+  const [a, setA] = useState(m.away_score?.toString() ?? '')
+  return (
+    <div className="card">
+      <div className="muted small">{m.round ? `${m.round} · ` : ''}{fmtDate(m.kickoff)}</div>
+      <div className="teams">
+        <span className="team">{m.home}</span>
+        <input className="score" type="number" min={0} inputMode="numeric" value={h} onChange={(e) => setH(e.target.value)} />
+        <span>-</span>
+        <input className="score" type="number" min={0} inputMode="numeric" value={a} onChange={(e) => setA(e.target.value)} />
+        <span className="team right">{m.away}</span>
+      </div>
+      <button className="primary small" onClick={() => onSave(m, h, a)}>Guardar resultado</button>{' '}
+      <button className="link" onClick={() => onDelete(m)}>Eliminar</button>
+    </div>
+  )
+}
