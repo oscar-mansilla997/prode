@@ -27,7 +27,7 @@ jobs:
       - name: Actualizar base de datos
         run: node scripts/migrate.mjs
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       - run: npm run build
         env:
           # Claves públicas (seguras de publicar)
