@@ -30,9 +30,12 @@ export default function Groups() {
             return (
               <Link key={p.id} to={`/p/${p.code}`} className="card prode">
                 {p.logo ? <img className="logo" src={p.logo} alt="" /> : <div className="logo ball">⚽</div>}
-                <strong>{p.name}</strong>
-                <span className="pozo">Pozo {money(p.pot)}</span>
-                <span className="small muted" style={{ margin: 0 }}>{p.fee ? `Jugada ${p.fee}` : 'Gratis'} · {p.players} jugando</span>
+                <strong className="pname">{p.name}</strong>
+                <div className="pozo-box"><span>Pozo</span><b>{money(p.pot)}</b></div>
+                <div className="stats">
+                  <div><span>Jugada</span><b>{p.fee ? money(Number(p.fee.replace(/\D/g, ''))) : 'Gratis'}</b></div>
+                  <div><span>Jugando</span><b>{p.players}</b></div>
+                </div>
                 {m && <span className={`pill s-${m.status}`} style={{ margin: '4px 0 0' }}>{m.submitted_at ? statusLabel[m.status] : 'Falta enviar'}</span>}
               </Link>
             )
