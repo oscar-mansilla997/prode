@@ -276,6 +276,7 @@ function PotCard({ group, locked, approved, reload }: { group: Group; locked: bo
   return (
     <div className="card pot">
       <h3>Pozo</h3>
+      {feeNum(group.fee) === 0 && <p className="small muted">Campeonato amistoso: con valor de jugada 0 no hay pozo ni premio, y las jugadas se aprueban solas. Ponele un valor en Ajustes para que sea con premio.</p>}
       <div className="row"><span>Recaudado ({approved} aprobados × {money(feeNum(group.fee))})</span><strong>{money(gross)}</strong></div>
       <div className="row"><span>Tu porcentaje</span>
         <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" disabled={locked} value={pct} onChange={(e) => setPct(e.target.value)} onBlur={save} /> % = <strong>{money(mine)}</strong></span></div>
@@ -315,6 +316,7 @@ function SettingsCard({ group, locked, reload }: { group: Group; locked: boolean
       <label className="small muted">Nombre</label>
       <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
       <label className="small muted">Valor de la jugada{locked && ' (bloqueado)'}</label>
+      <p className="small muted" style={{ margin: '2px 0' }}>Poné 0 para que sea un campeonato amistoso, sin pago ni premio.</p>
       <input value={v.fee} placeholder="ej: $5000" disabled={locked} onChange={(e) => setV({ ...v, fee: e.target.value })} />
       <label className="small muted">Alias para transferir</label>
       <input value={v.pay_alias} onChange={(e) => setV({ ...v, pay_alias: e.target.value })} />

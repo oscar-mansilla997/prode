@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
+import { isFree, money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
 import { ask, copyText } from '../dialogs'
 import ShareButton, { appUrl } from '../Share'
 import { Crest, GroupRanking, fmtDate } from '../components'
@@ -44,7 +44,9 @@ export default function Player({ profile }: { profile: Profile }) {
         {group.logo ? <img className="logo" src={group.logo} alt="" /> : <div className="logo ball">⚽</div>}
         {group.round && <div className="eyebrow">Fecha {group.round}{group.finished ? ' · terminada' : ''}</div>}
         <h1>{group.name}</h1>
-        <div className="potbox">Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>
+        {isFree(group.fee)
+          ? <div className="potbox">Campeonato amistoso<strong style={{ fontSize: '1.2rem', color: 'var(--txt)' }}>Sin premio en dinero</strong><span className="small muted">{Number(group.players)} jugando</span></div>
+          : <div className="potbox">Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>}
       </div>
       <ShareButton text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra y competí por el pozo:`} url={`${appUrl()}#/p/${code}`} label="Invitar amigos a este campeonato" />
       <div className="seg">
@@ -129,7 +131,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
           <div className="row"><strong>Hola {profile.name}</strong><span className={`pill s-${entry!.status}`}>{statusLabel[entry!.status]}</span></div>
           <div className="row" style={{ margin: '6px 0' }}><span className="muted small">Tus puntos</span><span className="pts">{total}</span></div>
           <p className="small">
-            {entry!.status === 'approved' && 'Tu jugada está aprobada. ¡Ya estás compitiendo!'}
+            {entry!.status === 'approved' && (isFree(group.fee) ? 'Tu jugada quedó registrada. ¡Ya estás compitiendo!' : 'Tu jugada está aprobada. ¡Ya estás compitiendo!')}
             {entry!.status === 'pending' && 'Jugada enviada. Para que entre a la competencia, el organizador tiene que confirmar tu transferencia.'}
             {entry!.status === 'rejected' && 'El organizador rechazó tu jugada. Contactalo para resolverlo.'}
           </p>
@@ -138,7 +140,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
         <p className="muted small">Completá tus resultados y enviá la jugada. Después no se puede modificar.</p>
       )}
 
-      {sent && entry!.status !== 'approved' && (group.fee || group.pay_alias) && (
+      {sent && !isFree(group.fee) && entry!.status !== 'approved' && (group.fee || group.pay_alias) && (
         <div className="card pay">
           <h3>Pago pendiente</h3>
           {group.fee && <div>Valor de la jugada: <strong>{group.fee}</strong></div>}
@@ -187,16 +189,22 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
         <div className="modal-bg" onClick={() => setShowPay(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>Jugada enviada</h2>
-            <p>Para entrar a la competencia, transferí:</p>
-            {group.fee && <div className="big">{group.fee}</div>}
-            {group.pay_alias && (
+            {isFree(group.fee) ? (
+              <p>Este es un campeonato amistoso: no hay que pagar ni hay premio en dinero. ¡Mucha suerte!</p>
+            ) : (
               <>
-                <p className="small muted">al alias</p>
-                <div className="big code">{group.pay_alias}</div>
-                <button className="primary" onClick={() => copyText(group.pay_alias!, 'Alias copiado')}>Copiar alias</button>
+                <p>Para entrar a la competencia, transferí:</p>
+                {group.fee && <div className="big">{group.fee}</div>}
+                {group.pay_alias && (
+                  <>
+                    <p className="small muted">al alias</p>
+                    <div className="big code">{group.pay_alias}</div>
+                    <button className="primary" onClick={() => copyText(group.pay_alias!, 'Alias copiado')}>Copiar alias</button>
+                  </>
+                )}
+                <p className="small muted">Cuando el organizador confirme tu pago, te llega un aviso en la campana y ya competís.</p>
               </>
             )}
-            <p className="small muted">Cuando el organizador confirme tu pago, te llega un aviso en la campana y ya competís.</p>
             <button className="ghost" onClick={() => setShowPay(false)}>Listo</button>
           </div>
         </div>

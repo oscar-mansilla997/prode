@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ShareButton, { appUrl } from '../Share'
 import { PushBanner } from '../PushPrompt'
-import { money, supabase, statusLabel, type Entry, type Prode } from '../supabase'
+import { isFree, money, supabase, statusLabel, type Entry, type Prode } from '../supabase'
 
 export default function Groups() {
   const [prodes, setProdes] = useState<Prode[] | null>(null)
@@ -36,9 +36,9 @@ export default function Groups() {
                 {p.logo ? <img className="logo" src={p.logo} alt="" /> : <div className="logo ball">⚽</div>}
                 {p.round && <span className={`pill ${p.finished ? 's-rejected' : 's-approved'}`} style={{ margin: 0 }}>Fecha {p.round}{p.finished ? ' · terminada' : ''}</span>}
                 <strong className="pname">{p.name}</strong>
-                <div className="pozo-box"><span>Pozo</span><b>{money(p.pot)}</b></div>
+                <div className="pozo-box">{isFree(p.fee) ? <><span>Campeonato</span><b style={{ color: 'var(--txt)' }}>Amistoso</b></> : <><span>Pozo</span><b>{money(p.pot)}</b></>}</div>
                 <div className="stats">
-                  <div><span>Jugada</span><b>{p.fee ? money(Number(p.fee.replace(/\D/g, ''))) : 'Gratis'}</b></div>
+                  <div><span>Jugada</span><b>{isFree(p.fee) ? 'Gratis' : money(Number(p.fee!.replace(/\D/g, '')))}</b></div>
                   <div><span>Jugando</span><b>{p.players}</b></div>
                 </div>
                 {m && <span className={`pill s-${m.status}`} style={{ margin: '4px 0 0' }}>{m.submitted_at ? statusLabel[m.status] : 'Falta enviar'}</span>}

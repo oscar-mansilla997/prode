@@ -53,5 +53,6 @@ export function isFinished(matches: Match[]) {
 }
 
 // Dinero: "$5.000" -> 5000
+export const isFree = (fee: string | null) => (Number((fee ?? '').replace(/\D/g, '')) || 0) === 0
 export const feeNum = (fee: string | null) => Number((fee ?? '').replace(/\D/g, '')) || 0
 export const money = (n: number) => '$' + Math.round(n).toLocaleString('es-AR')

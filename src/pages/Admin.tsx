@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { DEMO, money, supabase, type Entry, type Group, type Profile } from '../supabase'
+import { DEMO, feeNum, money, supabase, type Entry, type Group, type Profile } from '../supabase'
 import { Avatar, PredList } from '../components'
 import { LEAGUES, importNext } from './AutoImport'
 import { ask } from '../dialogs'
@@ -20,6 +20,7 @@ export default function Admin() {
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const nav = useNavigate()
   const [pct, setPct] = useState('')
+  const [fee, setFee] = useState('')
   const [pctMsg, setPctMsg] = useState('')
 
   const load = useCallback(async () => {
@@ -28,6 +29,7 @@ export default function Admin() {
     const gl = (g.data as Group[]) ?? []
     setGroups(gl)
     setPct((cur) => (cur === '' && gl[0] ? String(gl[0].commission_pct ?? 0) : cur))
+    setFee((cur) => (cur === '' && gl[0] ? String(feeNum(gl[0].fee)) : cur))
     if (gl.length) {
       const r = await supabase.from('entries').select('*, profile:profiles(*), group:groups(id, name, fee, logo)')
         .in('group_id', gl.map((x) => x.id)).eq('status', 'pending').order('submitted_at')
@@ -44,9 +46,15 @@ export default function Admin() {
     const v = Math.min(100, Math.max(0, Number(pct) || 0))
     setPct(String(v))
     let blocked = 0
+    const f = String(Math.max(0, Math.round(Number(fee.replace(/\D/g, '')) || 0)))
+    setFee(f)
     for (const g of groups) {
-      if (g.finish_notified || Number(g.commission_pct) === v) continue
-      const { error } = await supabase.from('groups').update({ commission_pct: v }).eq('id', g.id)
+      if (g.finish_notified) continue
+      const patch: Record<string, unknown> = {}
+      if (Number(g.commission_pct) !== v) patch.commission_pct = v
+      if (feeNum(g.fee) !== Number(f)) patch.fee = f === '0' ? null : f
+      if (!Object.keys(patch).length) continue
+      const { error } = await supabase.from('groups').update(patch).eq('id', g.id)
       if (error) blocked++
     }
     setPctMsg(blocked ? `${blocked} campeonato(s) tienen una fecha en juego y no se pueden cambiar ahora.` : 'Guardado ✓')
@@ -153,12 +161,17 @@ export default function Admin() {
       {tab === 'campeonatos' && (
         <>
           <div className="card pot">
-            <div className="eyebrow">Tu ganancia</div>
+            <div className="eyebrow">Valor y ganancia</div>
+            <div className="row" style={{ marginTop: 8 }}>
+              <span>Valor de la jugada ($)</span>
+              <span><input className="pct" style={{ width: 90 }} type="number" min={0} inputMode="numeric" value={fee} onChange={(e) => setFee(e.target.value)} /></span>
+            </div>
+            <p className="small muted" style={{ margin: '2px 0 6px' }}>Con valor 0 los campeonatos son amistosos: sin pago, sin pozo y sin premio. Cuando le pongas un valor, pasan a ser con premio.</p>
             <div className="row" style={{ marginTop: 8 }}>
               <span>Porcentaje que te queda de cada pozo</span>
               <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} /> %</span>
             </div>
-            <p className="small muted">Vale para cada fecha: se descuenta del total recaudado y el resto es el premio. Se aplica a las fechas que todavía no empezaron, y las siguientes se abren con el mismo porcentaje. No cambia las fechas en juego ni las ya terminadas. Ej: 4 jugadores × $5.000 con 10% → pozo $18.000 y te quedan $2.000.</p>
+            <p className="small muted">Vale para cada fecha: se descuenta del total recaudado y el resto es el premio. Se aplica a las fechas que todavía no empezaron, y las siguientes se abren con el mismo valor y porcentaje. No cambia las fechas en juego ni las ya terminadas. Ej: 4 jugadores × $5.000 con 10% → pozo $18.000 y te quedan $2.000.</p>
             <button className="primary small" onClick={savePct}>Guardar</button>
             {pctMsg && <span className="small muted"> {pctMsg}</span>}
           </div>

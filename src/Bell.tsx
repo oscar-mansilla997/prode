@@ -77,9 +77,13 @@ export default function Bell() {
             <div className="eyebrow">Campeonato terminado</div>
             <h2 style={{ margin: '6px 0' }}>¡Ganaste!</h2>
             <p className="small muted">{win.text}</p>
-            <div className="eyebrow" style={{ marginTop: 10 }}>Tu premio</div>
-            <div className="big" style={{ color: 'var(--gold)' }}>{money(Number(win.amount ?? 0))}</div>
-            <p className="small muted">El organizador te va a transferir el premio. Podés coordinar con él por WhatsApp.</p>
+            {win.amount ? (
+              <>
+                <div className="eyebrow" style={{ marginTop: 10 }}>Tu premio</div>
+                <div className="big" style={{ color: 'var(--gold)' }}>{money(Number(win.amount))}</div>
+                <p className="small muted">El organizador te va a transferir el premio. Podés coordinar con él por WhatsApp.</p>
+              </>
+            ) : <p className="small muted">Fue un campeonato amistoso, sin premio en dinero. ¡Felicitaciones!</p>}
             <button className="primary" onClick={closeWin}>Genial</button>
           </div>
         </div>
