@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { DEMO, supabase } from '../supabase'
 
 export default function Login() {
-  const [mode, setMode] = useState<'in' | 'up'>('in')
+  const [mode, setMode] = useState<'in' | 'up' | 'forgot'>('in')
   const [f, setF] = useState({ name: '', phone: '', alias: '', birth_date: '', email: '', password: '' })
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
@@ -13,6 +13,11 @@ export default function Login() {
     e.preventDefault()
     setBusy(true)
     setMsg('')
+    if (mode === 'forgot') {
+      const { error } = await supabase.auth.resetPasswordForEmail(f.email, { redirectTo: `${location.origin}${location.pathname}` })
+      setBusy(false)
+      return setMsg(error ? error.message : 'Listo. Te mandamos un mail con el link para elegir una contraseña nueva. Revisá también spam.')
+    }
     const { error } =
       mode === 'in'
         ? await supabase.auth.signInWithPassword({ email: f.email, password: f.password })
@@ -47,12 +52,14 @@ export default function Login() {
           </>
         )}
         <input type="email" placeholder="Email" value={f.email} onChange={set('email')} required />
-        <input type="password" placeholder="Contraseña (mín. 6)" minLength={6} value={f.password} onChange={set('password')} required />
-        <button className="primary" disabled={busy}>{mode === 'in' ? 'Ingresar' : 'Crear cuenta'}</button>
+        {mode !== 'forgot' && <input type="password" placeholder={mode === 'up' ? 'Contraseña (mín. 8)' : 'Contraseña'} minLength={mode === 'up' ? 8 : 6} value={f.password} onChange={set('password')} required />}
+        {mode === 'forgot' && <p className="small muted">Escribí tu mail y te enviamos un link para elegir una contraseña nueva.</p>}
+        <button className="primary" disabled={busy}>{mode === 'in' ? 'Ingresar' : mode === 'up' ? 'Crear cuenta' : 'Enviarme el mail'}</button>
         {msg && <p className="msg">{msg}</p>}
-        <button type="button" className="link" onClick={() => setMode(mode === 'in' ? 'up' : 'in')}>
+        <button type="button" className="link" onClick={() => { setMsg(''); setMode(mode === 'in' ? 'up' : 'in') }}>
           {mode === 'in' ? '¿No tenés cuenta? Registrate' : 'Ya tengo cuenta'}
         </button>
+        {mode === 'in' && <div><button type="button" className="link" onClick={() => { setMsg(''); setMode('forgot') }}>Olvidé mi contraseña</button></div>}
       </form>
     </div>
   )

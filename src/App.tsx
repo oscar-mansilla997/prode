@@ -10,6 +10,7 @@ import Player from './pages/Player'
 import Profile from './pages/Profile'
 import Bell from './Bell'
 import Brand from './Brand'
+import NewPassword from './pages/NewPassword'
 import Admin from './pages/Admin'
 import RankingPage from './pages/RankingPage'
 
@@ -17,6 +18,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
   const [profile, setProfile] = useState<P | null>(null)
+  const [recovering, setRecovering] = useState(false)
   const [owner, setOwner] = useState(false)
   const [pending, setPending] = useState(0)
 
@@ -43,7 +45,10 @@ export default function App() {
       setSession(data.session)
       setReady(true)
     })
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data } = supabase.auth.onAuthStateChange((e, s) => {
+      if (e === 'PASSWORD_RECOVERY') setRecovering(true)
+      setSession(s)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -65,6 +70,7 @@ export default function App() {
     )
   if (!ready) return <div className="screen">Cargando…</div>
   if (!session) return <Login />
+  if (recovering) return <NewPassword onDone={() => setRecovering(false)} />
   if (!profile) return <div className="screen">Cargando…</div>
 
   return (

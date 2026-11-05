@@ -66,7 +66,27 @@ export default function Profile({ profile, onSaved }: { profile: P; onSaved: () 
         <button className="primary">Guardar</button>
         {msg && <p className="msg">{msg}</p>}
       </form>
+      <ChangePassword />
       <button className="ghost" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
     </>
+  )
+}
+
+function ChangePassword() {
+  const [pw, setPw] = useState('')
+  const [msg, setMsg] = useState('')
+  async function save(e: React.FormEvent) {
+    e.preventDefault()
+    const { error } = await supabase.auth.updateUser({ password: pw })
+    setMsg(error ? error.message : 'Contraseña cambiada ✓')
+    if (!error) setPw('')
+  }
+  return (
+    <form className="card" onSubmit={save}>
+      <h3>Cambiar contraseña</h3>
+      <input type="password" placeholder="Contraseña nueva (mín. 8)" minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} required />
+      <button className="ghost">Cambiar contraseña</button>
+      {msg && <p className="msg">{msg}</p>}
+    </form>
   )
 }
