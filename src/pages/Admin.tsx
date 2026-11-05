@@ -69,6 +69,16 @@ export default function Admin() {
     try { await importNext((data as Group).id, l.id) } catch { /* se reintenta al abrir el campeonato */ }
     await load(); setBusy(false)
   }
+  async function createNext(g: Group) {
+    setBusy(true); setErr('')
+    const { data, error } = await supabase.from('groups').insert({
+      name: g.name, fee: g.fee, pay_alias: g.pay_alias, commission_pct: g.commission_pct, logo: g.logo,
+      league_id: g.league_id, season: g.season, round: (g.round ?? 0) + 1,
+    }).select().single()
+    setBusy(false)
+    if (error) return setErr(error.message)
+    nav(`/g/${(data as Group).id}`)
+  }
   async function removeGroup(g: Group) {
     if (!(await ask('Se borran sus partidos, jugadas y ranking. No se puede deshacer.', { title: `¿Eliminar "${g.name}"?`, ok: 'Eliminar', danger: true }))) return
     setBusy(true); setErr('')
@@ -97,6 +107,9 @@ export default function Admin() {
       </div>
       <div className="actions">
         <Link to={`/g/${g.id}`} className="link">Administrar ›</Link>
+        {g.finish_notified && g.league_id && !groups.some((x) => x.league_id === g.league_id && x.season === g.season && (x.round ?? 0) > (g.round ?? 0)) && (
+          <button className="ghost small" disabled={busy} onClick={() => createNext(g)}>Crear la fecha siguiente a mano</button>
+        )}
         <button className="danger" disabled={busy} onClick={() => removeGroup(g)}>Eliminar</button>
       </div>
     </div>

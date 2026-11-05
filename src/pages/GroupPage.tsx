@@ -165,7 +165,24 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
   const [err, setErr] = useState('')
   const [teams, setTeams] = useState<{ id: string; name: string; logo: string | null }[]>([])
-  useEffect(() => { supabase.from('teams').select('*').order('name').then(({ data }) => setTeams((data as typeof teams) ?? [])) }, [])
+  useEffect(() => {
+    ;(async () => {
+      type T = { id: string; name: string; logo: string | null }
+      const [t, gs] = await Promise.all([
+        supabase.from('teams').select('*').order('name'),
+        group.league_id ? supabase.from('groups').select('id').eq('league_id', group.league_id) : Promise.resolve({ data: [] }),
+      ])
+      const ids = ((gs.data as { id: string }[]) ?? []).map((x) => x.id)
+      const ms = ids.length ? ((await supabase.from('matches').select('home,away,home_logo,away_logo').in('group_id', ids)).data as { home: string; away: string; home_logo: string | null; away_logo: string | null }[]) ?? [] : []
+      const map = new Map<string, T>()
+      for (const x of (t.data as T[]) ?? []) map.set(x.name.toLowerCase(), x)
+      for (const m of ms) {
+        if (!map.has(m.home.toLowerCase())) map.set(m.home.toLowerCase(), { id: 'n:' + m.home, name: m.home, logo: m.home_logo })
+        if (!map.has(m.away.toLowerCase())) map.set(m.away.toLowerCase(), { id: 'n:' + m.away, name: m.away, logo: m.away_logo })
+      }
+      setTeams([...map.values()].sort((a, b) => a.name.localeCompare(b.name)))
+    })()
+  }, [group.league_id])
 
   async function add(e: React.FormEvent) {
     e.preventDefault()
@@ -195,7 +212,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
       {group.league_id && <AutoImport group={group} matches={matches} reload={reload} />}
       <form className="card" onSubmit={add}>
         <h3>Agregar partido</h3>
-        {teams.length < 2 ? <p className="small muted">Primero cargá al menos dos equipos con su escudo en <strong>Admin → Equipos</strong>.</p> : (
+        {teams.length < 2 ? <p className="small muted">No hay equipos para elegir. Cargalos con su escudo en <strong>Admin → Equipos</strong>.</p> : (
           <>
             <label className="lbl">Fecha o ronda</label>
             <input placeholder="Ej: Fecha 1" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
