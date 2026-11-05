@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase, type Profile as P } from '../supabase'
 import { Avatar } from '../components'
 import { toast } from '../dialogs'
+import { PushToggle } from '../PushPrompt'
 
 // Reduce la foto a 256px para que suba rápido
 async function shrink(file: File): Promise<Blob> {
@@ -74,6 +75,7 @@ export default function Profile({ profile, onSaved }: { profile: P; onSaved: () 
         <button className="primary">Guardar</button>
         {msg && <p className="msg">{msg}</p>}
       </form>
+      <PushToggle />
       <ChangePassword />
       <button className="ghost" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
     </>

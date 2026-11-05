@@ -28,6 +28,11 @@ jobs:
         run: node scripts/migrate.mjs
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Avisos al celular
+        run: node scripts/push-setup.mjs
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       - name: Configurar mail de recuperación
         run: node scripts/auth-config.mjs
         continue-on-error: true
