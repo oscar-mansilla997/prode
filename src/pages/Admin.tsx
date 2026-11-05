@@ -131,7 +131,7 @@ export default function Admin() {
               </div>
             )
           })}
-          {groups.filter((g) => !LEAGUES.some((l) => l.id === g.league_id)).map((g) => (
+          {groups.filter((g) => !LEAGUES.some((l) => groups.find((x) => x.league_id === l.id)?.id === g.id)).map((g) => (
             <div key={g.id} className="card row">
               <Link to={`/g/${g.id}`} className="link" style={{ color: 'var(--txt)' }}><strong>{g.name}</strong> <span className="muted small">Administrar ›</span></Link>
               <button className={`toggle ${g.active ? 'on' : ''}`} disabled={busy} onClick={() => setActive(g, !g.active)}>{g.active ? 'Activo' : 'Apagado'}</button>
