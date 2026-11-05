@@ -66,6 +66,7 @@ export default function GroupPage() {
         <button className="link" onClick={() => navigator.clipboard?.writeText(link)}>Copiar</button>{' · '}
         <a className="link" href={wa} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
       </div>
+      <SettingsCard group={group} reload={load} />
       <PotCard group={group} approved={entries.filter((e) => e.status === 'approved').length} reload={load} />
       <nav className="tabs">
         {(['participantes', 'partidos', 'ranking'] as Tab[]).map((t) => (
@@ -221,6 +222,36 @@ function PotCard({ group, approved, reload }: { group: Group; approved: number; 
         <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} onBlur={save} /> % = <strong>{money(mine)}</strong></span></div>
       <div className="row total"><span>Pozo para el ganador</span><strong>{money(gross - mine)}</strong></div>
       {msg && <span className="small muted">{msg}</span>}
+    </div>
+  )
+}
+
+function SettingsCard({ group, reload }: { group: Group; reload: () => void }) {
+  const [v, setV] = useState({ name: group.name, fee: group.fee ?? '', pay_alias: group.pay_alias ?? '' })
+  const [msg, setMsg] = useState('')
+  async function save() {
+    const { error } = await supabase.from('groups').update({ name: v.name.trim() || group.name, fee: v.fee.trim() || null, pay_alias: v.pay_alias.trim() || null }).eq('id', group.id)
+    setMsg(error ? error.message : 'Guardado ✓')
+    if (!error) reload()
+  }
+  async function toggle() {
+    await supabase.from('groups').update({ active: !group.active }).eq('id', group.id)
+    reload()
+  }
+  return (
+    <div className="card">
+      <div className="row">
+        <h3>⚙️ Ajustes</h3>
+        <button className={`toggle ${group.active ? 'on' : ''}`} onClick={toggle}>{group.active ? 'Activa' : 'Apagada'}</button>
+      </div>
+      <label className="small muted">Nombre</label>
+      <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
+      <label className="small muted">Valor de la jugada</label>
+      <input value={v.fee} placeholder="ej: $5000" onChange={(e) => setV({ ...v, fee: e.target.value })} />
+      <label className="small muted">Alias para transferir</label>
+      <input value={v.pay_alias} onChange={(e) => setV({ ...v, pay_alias: e.target.value })} />
+      <button className="primary" onClick={save}>Guardar</button>
+      {msg && <span className="small muted"> {msg}</span>}
     </div>
   )
 }

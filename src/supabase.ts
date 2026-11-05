@@ -10,8 +10,8 @@ export const supabase: SupabaseClient = DEMO
 export const configured = DEMO || Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 
 export type Group = { id: string; name: string; code: string; owner_id: string; fee: string | null; pay_alias: string | null; closes_at: string | null
-  league_id: number | null; season: string | null; round: number | null; from_date: string | null; to_date: string | null; logo: string | null; commission_pct: number }
-export type PubGroup = { id: string; name: string; fee: string | null; pay_alias: string | null; closes_at: string | null; logo: string | null; pot: number; players: number }
+  league_id: number | null; season: string | null; round: number | null; from_date: string | null; to_date: string | null; logo: string | null; commission_pct: number; active: boolean }
+export type PubGroup = { id: string; name: string; fee: string | null; pay_alias: string | null; closes_at: string | null; logo: string | null; pot: number; players: number; active?: boolean }
 export type Prode = { id: string; name: string; fee: string | null; code: string; logo: string | null; matches: number; players: number; pot: number }
 export type Match = {
   id: string

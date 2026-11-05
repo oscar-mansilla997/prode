@@ -28,6 +28,27 @@ export default function Groups() {
   }, [])
   useEffect(() => { load() }, [load])
 
+  async function setActive(g: Group, active: boolean) {
+    setBusy(true)
+    await supabase.from('groups').update({ active }).eq('id', g.id)
+    await load()
+    setBusy(false)
+  }
+
+  async function toggleLeague(l: { id: number; name: string }, g?: Group) {
+    if (g) return setActive(g, !g.active)
+    setBusy(true); setErr('')
+    const base = organized[0]
+    const { data, error } = await supabase
+      .from('groups')
+      .insert({ name: `Prode ${l.name}`, fee: base?.fee ?? null, pay_alias: base?.pay_alias ?? null, commission_pct: base?.commission_pct ?? 0 })
+      .select().single()
+    if (error) { setBusy(false); return setErr(error.message) }
+    try { await importNext((data as Group).id, l.id) } catch { /* se reintenta al abrir el prode */ }
+    await load()
+    setBusy(false)
+  }
+
   async function create(e: React.FormEvent) {
     e.preventDefault()
     setErr(''); setBusy(true)
@@ -62,12 +83,22 @@ export default function Groups() {
         })}
       </div>
 
-      <h2>Organizo yo</h2>
-      {organized.map((g) => (
-        <Link key={g.id} to={`/g/${g.id}`} className="card row">
-          <strong>{g.name}</strong>
-          <span className="muted small">Administrar ›</span>
-        </Link>
+      <h2>Mis ligas</h2>
+      <p className="small muted">Prendé las ligas que querés que aparezcan para jugar. Al prender una nueva, trae sola los partidos y el logo.</p>
+      {LEAGUES.map((l) => {
+        const g = organized.find((x) => x.league_id === l.id)
+        return (
+          <div key={l.id} className="card row">
+            <span>{g ? <Link to={`/g/${g.id}`}><strong>{l.name}</strong> <span className="muted small">Administrar ›</span></Link> : <strong>{l.name}</strong>}</span>
+            <button className={`toggle ${g?.active ? 'on' : ''}`} disabled={busy} onClick={() => toggleLeague(l, g)}>{g?.active ? 'Activa' : 'Apagada'}</button>
+          </div>
+        )
+      })}
+      {organized.filter((g) => !LEAGUES.some((l) => l.id === g.league_id)).map((g) => (
+        <div key={g.id} className="card row">
+          <Link to={`/g/${g.id}`}><strong>{g.name}</strong> <span className="muted small">Administrar ›</span></Link>
+          <button className={`toggle ${g.active ? 'on' : ''}`} disabled={busy} onClick={() => setActive(g, !g.active)}>{g.active ? 'Activa' : 'Apagada'}</button>
+        </div>
       ))}
       {!creating ? (
         <button className="ghost" onClick={() => setCreating(true)}>＋ Crear un prode nuevo</button>
@@ -89,6 +120,7 @@ export default function Groups() {
           {err && <p className="msg">{err}</p>}
         </form>
       )}
+      {err && !creating && <p className="msg">{err}</p>}
       {DEMO && <p className="small muted">Modo demo</p>}
     </>
   )

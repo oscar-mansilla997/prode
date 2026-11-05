@@ -60,3 +60,6 @@ input.pct { width:64px; display:inline-block; padding:6px; margin:0; text-align:
 .potbox { display:flex; flex-direction:column; align-items:center; margin-top:10px; padding:10px; border:1px solid #facc15; border-radius:12px; background:#1f1a05; }
 .potbox strong { font-size:1.8rem; color:#facc15; }
 .pozo { color:#facc15; font-weight:700; }
+
+.toggle { border-radius:999px; padding:6px 14px; border:1px solid #475569; background:#1e293b; color:#94a3b8; font-weight:600; }
+.toggle.on { background:#0f766e; border-color:#14b8a6; color:#fff; }
