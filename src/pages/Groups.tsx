@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { LEAGUES, importNext } from './AutoImport'
 import { DEMO, supabase, statusLabel, type Group, type Entry } from '../supabase'
 
 export default function Groups() {
   const [groups, setGroups] = useState<Group[]>([])
   const [mine, setMine] = useState<(Entry & { group: { name: string; code: string } })[]>([])
-  const [f, setF] = useState({ name: '', fee: '', pay_alias: '' })
+  const [f, setF] = useState({ name: '', fee: '', pay_alias: '', league: '' })
   const [err, setErr] = useState('')
   const nav = useNavigate()
 
@@ -27,6 +28,7 @@ export default function Groups() {
       .select()
       .single()
     if (error) return setErr(error.message)
+    if (f.league) { try { await importNext((data as Group).id, +f.league) } catch { /* se puede reintentar adentro */ } }
     nav(`/g/${(data as Group).id}`)
   }
 
@@ -54,6 +56,11 @@ export default function Groups() {
         <input placeholder="Nombre (ej: Prode Liga Profesional)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
         <input placeholder="Valor de la jugada (ej: $5000)" value={f.fee} onChange={(e) => setF({ ...f, fee: e.target.value })} />
         <input placeholder="Tu alias para recibir la transferencia" value={f.pay_alias} onChange={(e) => setF({ ...f, pay_alias: e.target.value })} />
+        <label className="small muted">Torneo (trae los partidos solo)</label>
+        <select value={f.league} onChange={(e) => setF({ ...f, league: e.target.value })}>
+          <option value="">Cargar partidos a mano</option>
+          {LEAGUES.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+        </select>
         <p className="small muted">El prode se cierra solo cuando cargues el resultado del último partido.</p>
         <button className="primary">Crear</button>
         {err && <p className="msg">{err}</p>}

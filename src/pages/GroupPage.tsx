@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { isFinished, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
-import AutoImport, { syncGroup } from './AutoImport'
+import AutoImport, { refreshResults } from './AutoImport'
 
 type Tab = 'participantes' | 'partidos' | 'ranking'
 
@@ -34,13 +34,13 @@ export default function GroupPage() {
   }, [id])
   useEffect(() => { load() }, [load])
 
-  // Actualiza resultados solo al abrir el prode (si está configurada la importación)
+  // Carga resultados de partidos ya jugados, una vez al abrir el prode
   const synced = useRef(false)
   useEffect(() => {
-    if (!group || synced.current || !group.league_id || !group.round) return
+    if (!group || synced.current || !group.league_id || matches.length === 0) return
     synced.current = true
-    syncGroup(group).then(() => load()).catch(() => {})
-  }, [group, load])
+    refreshResults(group, matches).then(() => load()).catch(() => {})
+  }, [group, matches, load])
 
   if (!group) return <p className="muted">Cargando…</p>
   const link = `${location.origin}${location.pathname}#/p/${group.code}`
@@ -153,7 +153,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
 
   return (
     <>
-      <AutoImport group={group} reload={reload} />
+      <AutoImport group={group} matches={matches} reload={reload} />
       <form className="card" onSubmit={add}>
         <h3>Agregar partido a mano</h3>
         <input placeholder="Fecha / ronda (ej: Fecha 12)" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />

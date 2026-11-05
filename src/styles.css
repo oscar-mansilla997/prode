@@ -43,3 +43,4 @@ a.link { color:var(--acc); text-decoration:none; }
 .topbar .right { display:flex; align-items:center; gap:14px; }
 .win { border-color:#facc15; background:#1f1a05; }
 .crest { width:22px; height:22px; object-fit:contain; vertical-align:middle; margin:0 6px; }
+select { width:100%; padding:12px; margin:6px 0; border-radius:10px; border:1px solid var(--line); background:#0b1220; color:var(--txt); font-size:1rem; }
