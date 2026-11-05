@@ -57,7 +57,16 @@ const done = await sql(`
     and not exists (select 1 from groups n where n.league_id = g.league_id and n.season = g.season and n.round = g.round + 1)`)
 let opened = 0
 for (const g of done) {
-  const next = Number(g.round) + 1
+  // La fecha que sigue es la del próximo partido que tenga la fuente (sirve también para copas con fases que no se numeran de a uno)
+  let next = Number(g.round) + 1
+  try {
+    const nx = await fetch(`https://www.thesportsdb.com/api/v1/json/123/eventsnextleague.php?id=${Number(g.league_id)}`)
+    const e0 = nx.ok ? ((await nx.json()).events ?? [])[0] : null
+    const r0 = Number(e0?.intRound)
+    if (e0 && Number.isInteger(r0) && r0 > 0 && r0 !== Number(g.round)) next = r0
+  } catch { /* usamos la fecha siguiente por número */ }
+  const exists = await sql(`select 1 from groups where league_id = ${Number(g.league_id)} and season = ${q(g.season)} and round = ${next} limit 1`)
+  if (exists.length) continue
   const res = await fetch(`https://www.thesportsdb.com/api/v1/json/123/eventsround.php?id=${Number(g.league_id)}&r=${next}&s=${encodeURIComponent(g.season)}`)
   if (!res.ok) continue
   const all = ((await res.json()).events ?? []).filter((e) => e.idEvent && e.strHomeTeam && e.strAwayTeam && e.dateEvent)
