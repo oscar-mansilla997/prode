@@ -31,7 +31,7 @@ function pts(hp: number, ap: number, hs: number | null, as: number | null) {
   const maria = addUser('maria@demo.com', 'María Gómez', '+54 351 555 2222', 'maria.gomez')
   const pablo = addUser('pablo@demo.com', 'Pablo Ruiz', '+54 351 555 3333', 'pablo.ruiz.ar')
   const gid = uid()
-  db.groups.push({ id: gid, name: 'Prode Liga Profesional', code: 'DEMO12', owner_id: admin, fee: '$5000', pay_alias: 'organizador.prode', closes_at: hrs(48), created_at: hrs(-72) })
+  db.groups.push({ id: gid, name: 'Prode Liga Profesional', code: 'DEMO12', owner_id: admin, fee: '$5000', pay_alias: 'organizador.prode', closes_at: hrs(48), commission_pct: 10, created_at: hrs(-72) })
   const mk = (round: string, home: string, away: string, k: number, hs: number | null, as: number | null) => {
     const id = uid()
     db.matches.push({ id, group_id: gid, round, home, away, kickoff: hrs(k), home_score: hs, away_score: as })
@@ -50,6 +50,9 @@ function pts(hp: number, ap: number, hs: number | null, as: number | null) {
   entry(pablo, 'approved', [[1, 0], [0, 0], [0, 1], [1, 1]])
   entry(maria, 'pending', [[2, 0], [1, 0], [2, 2], [0, 0]])
 })()
+
+const potOf = (g: R) =>
+  Math.round((Number(String(g.fee ?? '').replace(/\D/g, '')) || 0) * db.entries.filter((e) => e.group_id === g.id && e.status === 'approved').length * (1 - (g.commission_pct ?? 0) / 100))
 
 class Q {
   op = 'select'; f: ((r: R) => boolean)[] = []; ord: [string, boolean] | null = null
@@ -91,7 +94,7 @@ class Q {
         }
         const row: R = { ...p }
         if (this.t !== 'predictions') row.id ??= uid()
-        if (this.t === 'groups') Object.assign(row, { code: Math.random().toString(36).slice(2, 8).toUpperCase(), owner_id: current?.id, fee: p.fee ?? null, pay_alias: p.pay_alias ?? null, closes_at: p.closes_at ?? null, created_at: hrs(0) })
+        if (this.t === 'groups') Object.assign(row, { code: Math.random().toString(36).slice(2, 8).toUpperCase(), owner_id: current?.id, fee: p.fee ?? null, pay_alias: p.pay_alias ?? null, closes_at: p.closes_at ?? null, commission_pct: p.commission_pct ?? 0, created_at: hrs(0) })
         if (this.t === 'entries') {
           row.user_id = current?.id; row.status = 'pending'; row.submitted_at = null; row.created_at = hrs(0)
           if (tbl.some((x) => x.group_id === row.group_id && x.user_id === row.user_id)) return err('Ya estás anotado en este prode')
@@ -137,11 +140,11 @@ export const mockClient: any = {
   from: (t: string) => new Q(t),
   rpc: async (name: string, a: R) => {
     if (name === 'list_prodes') {
-      return { data: db.groups.map((g) => ({ id: g.id, name: g.name, fee: g.fee, code: g.code, logo: g.logo ?? null, matches: db.matches.filter((m) => m.group_id === g.id).length, players: db.entries.filter((e) => e.group_id === g.id && e.status === 'approved').length })), error: null }
+      return { data: db.groups.map((g) => ({ id: g.id, name: g.name, fee: g.fee, code: g.code, logo: g.logo ?? null, matches: db.matches.filter((m) => m.group_id === g.id).length, players: db.entries.filter((e) => e.group_id === g.id && e.status === 'approved').length, pot: potOf(g) })), error: null }
     }
     if (name === 'get_group_by_code') {
       const g = db.groups.find((x) => x.code === String(a.p_code).trim().toUpperCase())
-      return { data: g ? [{ id: g.id, name: g.name, fee: g.fee, pay_alias: g.pay_alias, closes_at: g.closes_at, logo: g.logo ?? null }] : [], error: null }
+      return { data: g ? [{ id: g.id, name: g.name, fee: g.fee, pay_alias: g.pay_alias, closes_at: g.closes_at, logo: g.logo ?? null, pot: potOf(g), players: db.entries.filter((e) => e.group_id === g.id && e.status === 'approved').length }] : [], error: null }
     }
     const ms = db.matches.filter((m) => m.group_id === a.gid)
     const data = db.entries

@@ -52,3 +52,11 @@ select { width:100%; padding:12px; margin:6px 0; border-radius:10px; border:1px 
 .hero { text-align:center; margin:8px 0 12px; }
 .hero h1 { margin:0; font-size:1.4rem; }
 .hero .logo { width:96px; height:96px; }
+.pot { border-color:#facc15; }
+.pot .row { margin:6px 0; gap:12px; }
+.pot .total { border-top:1px solid var(--line); padding-top:8px; font-size:1.1rem; }
+.pot .total strong { color:#facc15; }
+input.pct { width:64px; display:inline-block; padding:6px; margin:0; text-align:center; }
+.potbox { display:flex; flex-direction:column; align-items:center; margin-top:10px; padding:10px; border:1px solid #facc15; border-radius:12px; background:#1f1a05; }
+.potbox strong { font-size:1.8rem; color:#facc15; }
+.pozo { color:#facc15; font-weight:700; }

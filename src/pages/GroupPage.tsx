@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { isFinished, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
+import { feeNum, isFinished, money, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import AutoImport, { refreshResults } from './AutoImport'
 
@@ -55,6 +55,7 @@ export default function GroupPage() {
         <button className="link" onClick={() => navigator.clipboard?.writeText(link)}>Copiar</button>{' · '}
         <a className="link" href={wa} target="_blank" rel="noreferrer">Compartir por WhatsApp</a>
       </div>
+      <PotCard group={group} approved={entries.filter((e) => e.status === 'approved').length} reload={load} />
       <nav className="tabs">
         {(['participantes', 'partidos', 'ranking'] as Tab[]).map((t) => (
           <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
@@ -64,7 +65,7 @@ export default function GroupPage() {
       </nav>
       {tab === 'participantes' && <Participants entries={entries} matches={matches} preds={preds} reload={load} />}
       {tab === 'partidos' && <MatchesAdmin group={group} matches={matches} reload={load} />}
-      {tab === 'ranking' && <Ranking key={rk} groupId={group.id} finished={isFinished(matches)} />}
+      {tab === 'ranking' && <Ranking key={rk} groupId={group.id} finished={isFinished(matches)} pot={potOf(group, entries.filter((e) => e.status === 'approved').length)} />}
     </>
   )
 }
@@ -184,6 +185,31 @@ function ResultRow({ m, onSave, onDelete }: { m: Match; onSave: (m: Match, h: st
       </div>
       <button className="primary small" onClick={() => onSave(m, h, a)}>Guardar resultado</button>{' '}
       <button className="link" onClick={() => onDelete(m)}>Eliminar</button>
+    </div>
+  )
+}
+
+const potOf = (g: Group, approved: number) => Math.round(feeNum(g.fee) * approved * (1 - (g.commission_pct ?? 0) / 100))
+
+function PotCard({ group, approved, reload }: { group: Group; approved: number; reload: () => void }) {
+  const [pct, setPct] = useState(String(group.commission_pct ?? 0))
+  const [msg, setMsg] = useState('')
+  const gross = feeNum(group.fee) * approved
+  const mine = Math.round((gross * (Number(pct) || 0)) / 100)
+  async function save() {
+    const v = Math.min(100, Math.max(0, Number(pct) || 0))
+    const { error } = await supabase.from('groups').update({ commission_pct: v }).eq('id', group.id)
+    setMsg(error ? error.message : 'Guardado ✓')
+    if (!error) reload()
+  }
+  return (
+    <div className="card pot">
+      <h3>💰 Pozo</h3>
+      <div className="row"><span>Recaudado ({approved} aprobados × {money(feeNum(group.fee))})</span><strong>{money(gross)}</strong></div>
+      <div className="row"><span>Tu porcentaje</span>
+        <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} onBlur={save} /> % = <strong>{money(mine)}</strong></span></div>
+      <div className="row total"><span>Pozo para el ganador</span><strong>{money(gross - mine)}</strong></div>
+      {msg && <span className="small muted">{msg}</span>}
     </div>
   )
 }

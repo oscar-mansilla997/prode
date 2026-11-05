@@ -1,7 +1,7 @@
 -- TODO EN UNO. Borra lo anterior y lo crea de nuevo (usar mientras no haya datos reales).
 drop trigger if exists on_auth_user_created on auth.users;
 drop table if exists predictions, entries, matches, groups, profiles cascade;
-drop function if exists is_member(uuid), is_owner(uuid), get_group_by_code(text), points(int,int,int,int), get_leaderboard(uuid), handle_new_user(), guard_entry() cascade;
+drop function if exists is_member(uuid), is_owner(uuid), fee_num(text), list_prodes(), get_group_by_code(text), points(int,int,int,int), get_leaderboard(uuid), handle_new_user(), guard_entry() cascade;
 drop policy if exists "fotos publicas" on storage.objects;
 drop policy if exists "subir mi foto" on storage.objects;
 drop policy if exists "cambiar mi foto" on storage.objects;
@@ -26,7 +26,7 @@ create table groups (
   fee text,            -- ej: "$5000"
   pay_alias text,      -- alias donde transfieren
   closes_at timestamptz, -- (sin uso)
-  league_id int, season text, round int, from_date date, to_date date, logo text, -- importación automática
+  league_id int, season text, round int, from_date date, to_date date, logo text, commission_pct numeric not null default 0 check (commission_pct >= 0 and commission_pct <= 100), -- importación automática
   created_at timestamptz default now()
 );
 
@@ -75,12 +75,21 @@ language sql security definer set search_path = public stable as $$
   select is_owner(gid) or exists (select 1 from entries where group_id = gid and user_id = auth.uid());
 $$;
 
+create function fee_num(f text) returns numeric
+language sql immutable as $$
+  select coalesce(nullif(regexp_replace(coalesce(f, ''), '[^0-9]', '', 'g'), '')::numeric, 0);
+$$;
+
 -- Datos públicos del prode para quien entra con el link
 create function get_group_by_code(p_code text)
-returns table (id uuid, name text, fee text, pay_alias text, closes_at timestamptz, logo text)
+returns table (id uuid, name text, fee text, pay_alias text, closes_at timestamptz, logo text, pot numeric, players bigint)
 language sql security definer set search_path = public stable as $$
-  select id, name, fee, pay_alias, closes_at, logo from groups where code = upper(trim(p_code));
+  select g.id, g.name, g.fee, g.pay_alias, g.closes_at, g.logo,
+         round(fee_num(g.fee) * (select count(*) from entries e where e.group_id = g.id and e.status = 'approved') * (1 - g.commission_pct / 100)),
+         (select count(*) from entries e where e.group_id = g.id and e.status = 'approved')
+  from groups g where g.code = upper(trim(p_code));
 $$;
+
 
 -- Puntaje: 3 exacto, 1 acierta ganador/empate, 0 resto
 create function points(hp int, ap int, hs int, a_s int) returns int
@@ -202,12 +211,13 @@ create policy "cambiar mi foto" on storage.objects for update using (
   bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- Catálogo de prodes (pantalla principal)
-create or replace function list_prodes()
-returns table (id uuid, name text, fee text, code text, logo text, matches bigint, players bigint)
+create function list_prodes()
+returns table (id uuid, name text, fee text, code text, logo text, matches bigint, players bigint, pot numeric)
 language sql security definer set search_path = public stable as $$
   select g.id, g.name, g.fee, g.code, g.logo,
          (select count(*) from matches m where m.group_id = g.id),
-         (select count(*) from entries e where e.group_id = g.id and e.status = 'approved')
+         (select count(*) from entries e where e.group_id = g.id and e.status = 'approved'),
+         round(fee_num(g.fee) * (select count(*) from entries e where e.group_id = g.id and e.status = 'approved') * (1 - g.commission_pct / 100))
   from groups g
   order by g.created_at desc;
 $$;

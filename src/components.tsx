@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { supabase, type Row } from './supabase'
+import { money, supabase, type Row } from './supabase'
 
 export function Avatar({ url, name, size = 36 }: { url?: string | null; name: string; size?: number }) {
   const st = { width: size, height: size, fontSize: size * 0.45 }
   return url ? <img className="avatar" style={st} src={url} alt={name} /> : <span className="avatar ph" style={st}>{(name[0] ?? '?').toUpperCase()}</span>
 }
 
-export function Ranking({ groupId, finished }: { groupId: string; finished: boolean }) {
+export function Ranking({ groupId, finished, pot }: { groupId: string; finished: boolean; pot?: number }) {
   const [rows, setRows] = useState<Row[] | null>(null)
   useEffect(() => {
     const pull = () => supabase.rpc('get_leaderboard', { gid: groupId }).then(({ data }) => setRows((data as Row[]) ?? []))
@@ -33,7 +33,7 @@ export function Ranking({ groupId, finished }: { groupId: string; finished: bool
   return (
     <>
       {finished && paid.length > 0 && (
-        <div className="card win">🏆 <strong>{top(paid).length > 1 ? 'Ganadores' : 'Ganador'} del premio:</strong> {names(paid)} con {paid[0].pts} pts</div>
+        <div className="card win">🏆 <strong>{top(paid).length > 1 ? 'Ganadores' : 'Ganador'} del premio:</strong> {names(paid)} con {paid[0].pts} pts{pot ? <> · se lleva <strong>{money(pot)}</strong></> : null}</div>
       )}
       {finished && free.length > 0 && (
         <div className="card">🥈 Mejor puntaje sin pago (sin premio): <strong>{names(free)}</strong> con {free[0].pts} pts</div>

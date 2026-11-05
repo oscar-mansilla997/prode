@@ -10,9 +10,9 @@ export const supabase: SupabaseClient = DEMO
 export const configured = DEMO || Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 
 export type Group = { id: string; name: string; code: string; owner_id: string; fee: string | null; pay_alias: string | null; closes_at: string | null
-  league_id: number | null; season: string | null; round: number | null; from_date: string | null; to_date: string | null; logo: string | null }
-export type PubGroup = { id: string; name: string; fee: string | null; pay_alias: string | null; closes_at: string | null; logo: string | null }
-export type Prode = { id: string; name: string; fee: string | null; code: string; logo: string | null; matches: number; players: number }
+  league_id: number | null; season: string | null; round: number | null; from_date: string | null; to_date: string | null; logo: string | null; commission_pct: number }
+export type PubGroup = { id: string; name: string; fee: string | null; pay_alias: string | null; closes_at: string | null; logo: string | null; pot: number; players: number }
+export type Prode = { id: string; name: string; fee: string | null; code: string; logo: string | null; matches: number; players: number; pot: number }
 export type Match = {
   id: string
   group_id: string
@@ -50,3 +50,7 @@ export const statusLabel = { pending: 'Pendiente de pago', approved: 'Aprobado â
 export function isFinished(matches: Match[]) {
   return matches.length > 0 && matches.every((m) => m.home_score !== null)
 }
+
+// Dinero: "$5.000" -> 5000
+export const feeNum = (fee: string | null) => Number((fee ?? '').replace(/\D/g, '')) || 0
+export const money = (n: number) => '$' + Math.round(n).toLocaleString('es-AR')

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { isFinished, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
+import { isFinished, money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
 
 type Draft = Record<string, { h: string; a: string }>
@@ -38,6 +38,7 @@ export default function Player({ profile }: { profile: Profile }) {
       <div className="hero">
         {group.logo ? <img className="logo" src={group.logo} alt="" /> : <div className="logo ball">⚽</div>}
         <h1>{group.name}</h1>
+        <div className="potbox">💰 Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>
       </div>
       {entry === undefined ? <p className="muted">Cargando…</p>
         : entry === null ? (
@@ -171,7 +172,7 @@ function Jugada({ group, entry, profile, onChange }: { group: PubGroup; entry: E
       {sent && (
         <>
           <h3>Ranking</h3>
-          <Ranking groupId={group.id} finished={isFinished(matches)} />
+          <Ranking groupId={group.id} finished={isFinished(matches)} pot={Number(group.pot)} />
         </>
       )}
     </>
