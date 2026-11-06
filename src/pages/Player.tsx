@@ -48,7 +48,7 @@ export default function Player({ profile }: { profile: Profile }) {
           ? <div className="potbox">Campeonato amistoso<strong style={{ fontSize: '1.2rem', color: 'var(--txt)' }}>Sin premio en dinero</strong><span className="small muted">{Number(group.players)} jugando</span></div>
           : <div className="potbox">Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>}
       </div>
-      <ShareButton text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra y competí por el pozo:`} url={`${appUrl()}#/p/${code}`} label="Invitar amigos a este campeonato" />
+      <ShareButton text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra Sport y competí por el pozo:`} url={`${appUrl()}#/p/${code}`} label="Invitar amigos a este campeonato" />
       <div className="seg">
         <button className={tab === 'jugar' ? 'on' : ''} onClick={() => setTab('jugar')}>{entry?.submitted_at ? 'Mi jugada' : 'Jugar'}</button>
         <button className={tab === 'ranking' ? 'on' : ''} onClick={() => setTab('ranking')}>Ranking</button>

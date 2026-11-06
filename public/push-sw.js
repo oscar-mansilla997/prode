@@ -2,7 +2,7 @@
 self.addEventListener('push', (e) => {
   let d = {}
   try { d = e.data.json() } catch (_) { d = { body: e.data ? e.data.text() : '' } }
-  e.waitUntil(self.registration.showNotification(d.title || 'La Cabra', {
+  e.waitUntil(self.registration.showNotification(d.title || 'La Cabra Sport', {
     body: d.body || '',
     icon: 'icon-192.png',
     badge: 'icon-192.png',

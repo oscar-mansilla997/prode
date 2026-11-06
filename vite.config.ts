@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'La Cabra',
-        short_name: 'La Cabra',
+        name: 'La Cabra Sport',
+        short_name: 'La Cabra Sport',
         description: 'Armá prodes deportivos con tus amigos',
         lang: 'es-AR',
         theme_color: '#0a0d12',

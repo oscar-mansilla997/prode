@@ -77,7 +77,7 @@ export default function GroupPage() {
             <div className="eyebrow">Link para tus participantes</div>
             <div className="code small" style={{ wordBreak: 'break-all' }}>{link}</div>
             <button className="link" onClick={() => copyText(link, 'Link copiado')}>Copiar</button>
-            <ShareButton text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra y competí por el pozo:`} url={link} ghost={false} />
+            <ShareButton text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra Sport y competí por el pozo:`} url={link} ghost={false} />
           </div>
           <SettingsCard group={group} locked={locked} reload={load} />
           <PotCard group={group} locked={locked} approved={entries.filter((e) => e.status === 'approved').length} reload={load} />

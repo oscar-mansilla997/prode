@@ -7,7 +7,7 @@ const SITE = 'https://oscar-mansilla997.github.io/prode/'
 const body = {
   site_url: SITE,
   uri_allow_list: `${SITE},${SITE}**,http://localhost:5173/**`,
-  mailer_subjects_recovery: 'Recuperá tu contraseña · La Cabra',
+  mailer_subjects_recovery: 'Recuperá tu contraseña · La Cabra Sport',
   mailer_templates_recovery_content:
     '<div style="font-family:Arial,sans-serif"><h2>Recuperá tu contraseña</h2>' +
     '<p>Tocá el botón para elegir una contraseña nueva. Si no lo pediste vos, ignorá este mail.</p>' +

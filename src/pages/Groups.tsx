@@ -26,7 +26,7 @@ export default function Groups() {
       <PushBanner />
       <div className="eyebrow" style={{ marginTop: 8 }}>Torneos disponibles</div>
       <h2 style={{ marginTop: 4 }}>Campeonatos</h2>
-      <ShareButton text='Sumate a La Cabra, el prode de fútbol. Armá tu jugada y competí por el pozo de cada fecha:' url={appUrl()} label='Invitar amigos por WhatsApp' ghost={false} />
+      <ShareButton text='Sumate a La Cabra Sport, el prode de fútbol. Armá tu jugada y competí por el pozo de cada fecha:' url={appUrl()} label='Invitar amigos por WhatsApp' ghost={false} />
       {prodes === null ? <p className="muted">Cargando…</p> : prodes.length === 0 ? <p className="empty">Todavía no hay campeonatos habilitados.</p> : (
         <div className="prodes">
           {prodes.map((p) => {

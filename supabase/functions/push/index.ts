@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')!, Deno.env.get('VAPID_PUBLIC_KEY')!, Deno.env.get('VAPID_PRIVATE_KEY')!)
   const money = n.amount ? ` Premio: $${Number(n.amount).toLocaleString('es-AR')}` : ''
   const payload = JSON.stringify({
-    title: n.kind === 'win' ? '¡Ganaste!' : n.kind === 'admin' ? 'Campeonato terminado' : 'La Cabra',
+    title: n.kind === 'win' ? '¡Ganaste!' : n.kind === 'admin' ? 'Campeonato terminado' : 'La Cabra Sport',
     body: n.text + (n.kind === 'win' ? money : ''),
     url: n.code ? `#/p/${n.code}` : n.kind === 'admin' || n.kind === 'ready' || !n.code ? '#/admin' : '',
     tag: n.id,
