@@ -3,13 +3,15 @@ import { Link, useNavigate } from 'react-router-dom'
 import { DEMO, feeNum, money, supabase, type Entry, type Group, type Profile } from '../supabase'
 import { Avatar, PredList } from '../components'
 import { LEAGUES, importNext } from './AutoImport'
-import { ask } from '../dialogs'
+import { ask, toast } from '../dialogs'
 import { uploadCrest } from '../upload'
 
 type Req = Entry & { profile: Profile; group: { id: string; name: string; fee: string | null; logo: string | null } }
 
 export default function Admin() {
-  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'equipos' | 'usuarios'>('resumen')
+  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'equipos' | 'usuarios' | 'organizadores'>('resumen')
+  const [isOwner, setIsOwner] = useState(false)
+  useEffect(() => { supabase.rpc('is_owner').then(({ data }) => setIsOwner(data === true)) }, [])
   const [groups, setGroups] = useState<Group[]>([])
   const [reqs, setReqs] = useState<Req[]>([])
   const [open, setOpen] = useState<string | null>(null)
@@ -131,11 +133,13 @@ export default function Admin() {
         <button className={tab === 'solicitudes' ? 'on' : ''} onClick={() => setTab('solicitudes')}>Solicitudes{reqs.length > 0 && <span className="n">{reqs.length}</span>}</button>
         <button className={tab === 'campeonatos' ? 'on' : ''} onClick={() => setTab('campeonatos')}>Campeonatos</button>
         <button className={tab === 'equipos' ? 'on' : ''} onClick={() => setTab('equipos')}>Equipos</button>
-        <button className={tab === 'usuarios' ? 'on' : ''} onClick={() => setTab('usuarios')}>Usuarios</button>
+        {isOwner && <button className={tab === 'usuarios' ? 'on' : ''} onClick={() => setTab('usuarios')}>Usuarios</button>}
+        {isOwner && <button className={tab === 'organizadores' ? 'on' : ''} onClick={() => setTab('organizadores')}>Organizadores</button>}
       </div>
 
       {tab === 'resumen' && <Resumen />}
-      {tab === 'usuarios' && <Usuarios />}
+      {tab === 'usuarios' && isOwner && <Usuarios />}
+      {tab === 'organizadores' && isOwner && <Organizadores />}
       {tab === 'equipos' && <Equipos />}
       {tab === 'solicitudes' && (reqs.length === 0 ? <p className="empty">No hay solicitudes pendientes.<br />Cuando alguien envíe su jugada, aparece acá para que confirmes el pago.</p> : reqs.map((r) => {
         const digits = r.profile.phone.replace(/\D/g, '')
@@ -277,6 +281,52 @@ function Usuarios() {
             <span className="small muted" style={{ textAlign: 'right' }}>{u.jugadas} jugadas<br />{u.pagadas} pagadas</span>
           </div>
           {u.phone && <a className="link small" href={`https://wa.me/${u.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">WhatsApp {u.phone}</a>}
+        </div>
+      ))}
+    </>
+  )
+}
+
+type Org = { id: string; name: string | null; email: string; avatar_url: string | null; campeonatos: number; aprobadas: number }
+
+function Organizadores() {
+  const [l, setL] = useState<Org[] | null>(null)
+  const [email, setEmail] = useState('')
+  const [msg, setMsg] = useState('')
+  const load = () => supabase.rpc('list_organizers').then(({ data }) => setL((data as Org[]) ?? []))
+  useEffect(() => { load() }, [])
+  async function add() {
+    setMsg('')
+    if (!email.trim()) return
+    const { data } = await supabase.rpc('add_organizer', { p_email: email.trim() })
+    if (data === 'ok') { setEmail(''); toast('Organizador agregado'); load() }
+    else if (data === 'notfound') setMsg('Esa persona todavía no se registró en la app. Pedile que cree su cuenta con ese mail y probá de nuevo.')
+    else if (data === 'exists') setMsg('Esa persona ya es organizadora.')
+    else setMsg('No se pudo agregar.')
+  }
+  async function remove(o: Org) {
+    if (!(await ask(`¿Sacar a ${o.name || o.email}? Sus campeonatos pasan a tu cuenta para que atiendas los pagos pendientes.`, { title: 'Sacar organizador', ok: 'Sacar', danger: true }))) return
+    await supabase.rpc('remove_organizer', { p_id: o.id })
+    toast('Organizador sacado')
+    load()
+  }
+  return (
+    <>
+      <div className="card">
+        <label className="lbl">Mail de la persona (ya registrada en la app)</label>
+        <input type="email" placeholder="correo@ejemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        {msg && <p className="small muted">{msg}</p>}
+        <button className="primary" onClick={add}>Agregar organizador</button>
+        <p className="small muted">Puede armar sus propios campeonatos, con su alias y su valor, y confirmar sus pagos. No puede agregar ni sacar a otros ni ver la lista de usuarios.</p>
+      </div>
+      {l === null ? <p className="muted">Cargando…</p> : l.length === 0 ? <p className="empty">Todavía no agregaste organizadores.</p> : l.map((o) => (
+        <div key={o.id} className="card">
+          <div className="row">
+            <span className="who"><Avatar url={o.avatar_url} name={o.name || o.email} size={38} />
+              <span><strong>{o.name || 'Sin nombre'}</strong><div className="small muted" style={{ margin: 0 }}>{o.email}</div></span></span>
+            <span className="small muted" style={{ textAlign: 'right' }}>{o.campeonatos} campeonatos<br />{o.aprobadas} pagadas</span>
+          </div>
+          <button className="danger" onClick={() => remove(o)}>Sacar</button>
         </div>
       ))}
     </>
