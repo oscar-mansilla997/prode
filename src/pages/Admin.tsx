@@ -289,36 +289,43 @@ function Usuarios() {
 
 type Org = { id: string; name: string | null; email: string; avatar_url: string | null; campeonatos: number; aprobadas: number }
 
+type Cand = { id: string; name: string | null; email: string; avatar_url: string | null }
+
 function Organizadores() {
   const [l, setL] = useState<Org[] | null>(null)
-  const [email, setEmail] = useState('')
-  const [msg, setMsg] = useState('')
+  const [q, setQ] = useState('')
+  const [cands, setCands] = useState<Cand[]>([])
   const load = () => supabase.rpc('list_organizers').then(({ data }) => setL((data as Org[]) ?? []))
-  useEffect(() => { load() }, [])
-  async function add() {
-    setMsg('')
-    if (!email.trim()) return
-    const { data } = await supabase.rpc('add_organizer', { p_email: email.trim() })
-    if (data === 'ok') { setEmail(''); toast('Organizador agregado'); load() }
-    else if (data === 'notfound') setMsg('Esa persona todavía no se registró en la app. Pedile que cree su cuenta con ese mail y probá de nuevo.')
-    else if (data === 'exists') setMsg('Esa persona ya es organizadora.')
-    else setMsg('No se pudo agregar.')
+  const find = (t: string) => supabase.rpc('search_users', { p_q: t }).then(({ data }) => setCands((data as Cand[]) ?? []))
+  useEffect(() => { load(); find('') }, [])
+  useEffect(() => { const t = setTimeout(() => find(q), 250); return () => clearTimeout(t) }, [q])
+  async function add(c: Cand) {
+    if (!(await ask(`¿Agregar a ${c.name || c.email} como organizador?`, { title: 'Nuevo organizador', ok: 'Agregar' }))) return
+    const { data } = await supabase.rpc('add_organizer_id', { p_id: c.id })
+    toast(data === 'ok' ? 'Organizador agregado' : 'No se pudo agregar')
+    load(); find(q)
   }
   async function remove(o: Org) {
     if (!(await ask(`¿Sacar a ${o.name || o.email}? Sus campeonatos pasan a tu cuenta para que atiendas los pagos pendientes.`, { title: 'Sacar organizador', ok: 'Sacar', danger: true }))) return
     await supabase.rpc('remove_organizer', { p_id: o.id })
     toast('Organizador sacado')
-    load()
+    load(); find(q)
   }
   return (
     <>
-      <div className="card">
-        <label className="lbl">Mail de la persona (ya registrada en la app)</label>
-        <input type="email" placeholder="correo@ejemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-        {msg && <p className="small muted">{msg}</p>}
-        <button className="primary" onClick={add}>Agregar organizador</button>
-        <p className="small muted">Puede armar sus propios campeonatos, con su alias y su valor, y confirmar sus pagos. No puede agregar ni sacar a otros ni ver la lista de usuarios.</p>
-      </div>
+      <label className="lbl">Buscar persona registrada</label>
+      <input placeholder="Nombre, alias o mail" value={q} onChange={(e) => setQ(e.target.value)} />
+      {cands.length === 0 ? <p className="small muted">No hay personas con ese dato.</p> : cands.map((c) => (
+        <div key={c.id} className="card">
+          <div className="row">
+            <span className="who"><Avatar url={c.avatar_url} name={c.name || c.email} size={38} />
+              <span><strong>{c.name || 'Sin nombre'}</strong><div className="small muted" style={{ margin: 0 }}>{c.email}</div></span></span>
+            <button className="primary small" onClick={() => add(c)}>Agregar</button>
+          </div>
+        </div>
+      ))}
+      <p className="small muted">Un organizador arma sus propios campeonatos y confirma sus pagos. No puede agregar o sacar a otros ni ver la lista de usuarios.</p>
+      <h3 style={{ marginTop: 18 }}>Tus organizadores</h3>
       {l === null ? <p className="muted">Cargando…</p> : l.length === 0 ? <p className="empty">Todavía no agregaste organizadores.</p> : l.map((o) => (
         <div key={o.id} className="card">
           <div className="row">
