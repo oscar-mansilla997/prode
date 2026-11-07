@@ -141,3 +141,6 @@ label.small.muted, .lbl { display:block; color:#b4bfd0; font-size:.8rem; font-we
 * { scrollbar-width: none; -ms-overflow-style: none; }
 *::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .brandtext em { font-style:inherit; font-size:.62rem; color:var(--acc); letter-spacing:.42em; padding-left:2px; margin-top:2px; }
+.realscore { display:flex; flex-direction:column; align-items:center; margin:6px 0 2px; gap:1px; }
+.realscore span:first-child { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.15em; }
+.realscore b { font-size:1.5rem; line-height:1.1; color:#fff; letter-spacing:.06em; }

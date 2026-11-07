@@ -169,8 +169,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
                 <span className="team right">{m.away}<Crest url={m.away_logo} /></span>
               </div>
               {m.home_score !== null && (
-                <div className="small">Resultado: <strong>{m.home_score} - {m.away_score}</strong>
-                </div>
+                <div className="realscore"><span>Resultado</span><b>{m.home_score} - {m.away_score}</b></div>
               )}
               {!sent && locked && <div className="small muted">Partido ya empezado, no se puede pronosticar.</div>}
             </div>
