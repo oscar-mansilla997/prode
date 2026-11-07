@@ -77,7 +77,7 @@ export function PredList({ groupId, entryId, showPoints = true }: { groupId: str
           <strong>{p ? `${p.home_pred} - ${p.away_pred}` : '—'}</strong>
         </div>
         {m.home_score !== null && (
-          <div className="realscore"><span>Resultado</span><b>{m.home_score} - {m.away_score}</b>
+          <div className={`realscore r${pts ?? 'x'}`}><span>Resultado</span><b>{m.home_score} - {m.away_score}</b>
             {showPoints && pts !== null && <span className={`pill p${pts}`}>{pts} pts</span>}
           </div>
         )}
