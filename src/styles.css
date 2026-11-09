@@ -144,7 +144,7 @@ label.small.muted, .lbl { display:block; color:#b4bfd0; font-size:.8rem; font-we
 .realscore { display:flex; flex-direction:column; align-items:center; margin:6px 0 2px; gap:1px; }
 .realscore span:first-child { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.15em; }
 .realscore b { font-size:1.5rem; line-height:1.1; color:#fff; letter-spacing:.06em; }
-.realscore { border-radius:12px; padding:6px 0 8px; border:1px solid transparent; }
-.realscore.r3 { background:#10392c; border-color:#1c6b52; } .realscore.r3 b { color:#63e0b6; }
-.realscore.r1 { background:#3a2f12; border-color:#7a6125; } .realscore.r1 b { color:#e5c26b; }
-.realscore.r0 { background:#3b1c1c; border-color:#7a3836; } .realscore.r0 b { color:#f19a98; }
+.realscore { padding:4px 0 2px; }
+.realscore.r3 { } .realscore.r3 b { color:#63e0b6; }
+.realscore.r1 { } .realscore.r1 b { color:#e5c26b; }
+.realscore.r0 { } .realscore.r0 b { color:#f19a98; }
