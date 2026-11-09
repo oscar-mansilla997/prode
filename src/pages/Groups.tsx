@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ShareButton, { appUrl } from '../Share'
 import { PushBanner } from '../PushPrompt'
-import { isFree, money, supabase, statusLabel, type Entry, type Prode } from '../supabase'
+import { supabase, statusLabel, isFree, money, type Entry, type Prode, type Row } from '../supabase'
+import { Avatar } from '../components'
 
 export default function Groups() {
   const [prodes, setProdes] = useState<Prode[] | null>(null)
@@ -53,16 +54,25 @@ export default function Groups() {
       {hist.length > 0 && (
         <>
           <h3 style={{ marginTop: 22 }}>Historial</h3>
-          {hist.map((p) => (
-            <Link key={p.id} to={`/p/${p.code}`} className="card">
-              <div className="row">
-                <span><strong>{p.name}</strong><div className="small muted" style={{ margin: 0 }}>{p.round ? `Fecha ${p.round} · ` : ''}terminada</div></span>
-                <span className="small muted" style={{ textAlign: 'right' }}>{p.players} jugaron{!isFree(p.fee) && <><br />Pozo {money(p.pot)}</>}</span>
-              </div>
-            </Link>
-          ))}
+          {hist.map((p) => <HistoryItem key={p.id} p={p} />)}
         </>
       )}
     </>
+  )
+}
+
+function HistoryItem({ p }: { p: Prode }) {
+  const [rows, setRows] = useState<Row[] | null>(null)
+  useEffect(() => { supabase.rpc('get_leaderboard', { gid: p.id }).then(({ data }) => setRows(((data as Row[]) ?? []).filter((r) => r.paid))) }, [p.id])
+  return (
+    <div className="card">
+      <div className="muted small" style={{ margin: 0 }}>{p.name}{p.round ? ` · Fecha ${p.round}` : ''}</div>
+      {rows === null ? <p className="muted small">Cargando…</p> : rows.length === 0 ? <p className="muted small">Sin participantes.</p> : rows.map((r, i) => (
+        <div key={r.entry_id} className="row" style={{ marginTop: 8 }}>
+          <span className="who"><span className="muted small" style={{ width: 16 }}>{i + 1}</span><Avatar url={r.avatar_url} name={r.name || '?'} size={28} /><strong>{r.name}</strong></span>
+          <span className="pts">{r.pts} pts</span>
+        </div>
+      ))}
+    </div>
   )
 }
