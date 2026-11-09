@@ -104,30 +104,55 @@ export const Icon = {
   bell: <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0" /></svg>,
 }
 
+type Pick = { home: string; away: string; home_logo: string | null; away_logo: string | null; kickoff: string; home_score: number | null; away_score: number | null; home_pred: number | null; away_pred: number | null }
+
+function Picks({ eid }: { eid: string }) {
+  const [l, setL] = useState<Pick[] | null>(null)
+  useEffect(() => { supabase.rpc('get_entry_picks', { eid }).then(({ data }) => setL((data as Pick[]) ?? [])) }, [eid])
+  if (l === null) return <p className="muted small">Cargando…</p>
+  let total = 0
+  return (
+    <div className="picks">
+      {l.map((m, i) => {
+        const has = m.home_pred !== null && m.home_score !== null
+        const pts = has ? (m.home_pred === m.home_score && m.away_pred === m.away_score ? 3 : Math.sign(m.home_pred! - m.away_pred!) === Math.sign(m.home_score! - m.away_score!) ? 1 : 0) : null
+        total += pts ?? 0
+        return (
+          <div key={i} className="pick">
+            <div className="pteams">
+              <span className="team"><Crest url={m.home_logo} />{m.home}</span>
+              <span className="team right">{m.away}<Crest url={m.away_logo} /></span>
+            </div>
+            <div className="pnums">
+              <div><span>Pronóstico</span><b>{m.home_pred !== null ? `${m.home_pred} - ${m.away_pred}` : '—'}</b></div>
+              <div className={`r${pts ?? 'x'}`}><span>Resultado</span><b>{m.home_score !== null ? `${m.home_score} - ${m.away_score}` : '—'}</b></div>
+              <div><span>Puntos</span><b>{pts ?? '—'}</b></div>
+            </div>
+          </div>
+        )
+      })}
+      <div className="row" style={{ marginTop: 8 }}><span className="muted small">Total</span><span className="pts">{total} pts</span></div>
+    </div>
+  )
+}
+
 function HistoryItem({ p }: { p: Prode }) {
   const [rows, setRows] = useState<Row[] | null>(null)
-  const [mine, setMine] = useState<string | null>(null)
-  const [show, setShow] = useState(false)
-  useEffect(() => {
-    ;(async () => {
-      const uid = (await supabase.auth.getUser()).data.user?.id
-      const e = await supabase.from('entries').select('id, submitted_at').eq('group_id', p.id).eq('user_id', uid!).maybeSingle()
-      const row = e.data as { id: string; submitted_at: string | null } | null
-      setMine(row?.submitted_at ? row.id : null)
-    })()
-  }, [p.id])
+  const [open, setOpen] = useState<string | null>(null)
   useEffect(() => { supabase.rpc('get_leaderboard', { gid: p.id }).then(({ data }) => setRows(((data as Row[]) ?? []).filter((r) => r.paid))) }, [p.id])
   return (
     <div className="card">
       <div className="muted small" style={{ margin: 0 }}>{p.round ? `Fecha ${p.round}` : p.name}</div>
       {rows === null ? <p className="muted small">Cargando…</p> : rows.length === 0 ? <p className="muted small">Sin participantes.</p> : rows.map((r, i) => (
-        <div key={r.entry_id} className="row" style={{ marginTop: 8 }}>
-          <span className="who"><span className="muted small" style={{ width: 16 }}>{i + 1}</span><Avatar url={r.avatar_url} name={r.name || '?'} size={28} /><strong>{r.name}</strong></span>
-          <span className="pts">{r.pts} pts</span>
+        <div key={r.entry_id} style={{ marginTop: 8 }}>
+          <div className="row">
+            <span className="who"><span className="muted small" style={{ width: 16 }}>{i + 1}</span><Avatar url={r.avatar_url} name={r.name || '?'} size={28} /><strong>{r.name}</strong></span>
+            <span className="pts">{r.pts} pts</span>
+          </div>
+          <button className="link" onClick={() => setOpen(open === r.entry_id ? null : r.entry_id)}>{open === r.entry_id ? 'Ocultar jugada' : 'Ver jugada'}</button>
+          {open === r.entry_id && <Picks eid={r.entry_id} />}
         </div>
       ))}
-      {mine && <button className="link" onClick={() => setShow(!show)}>{show ? 'Ocultar mi jugada' : 'Ver mi jugada'}</button>}
-      {mine && show && <PredList groupId={p.id} entryId={mine} />}
     </div>
   )
 }

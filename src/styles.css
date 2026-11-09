@@ -148,3 +148,10 @@ label.small.muted, .lbl { display:block; color:#b4bfd0; font-size:.8rem; font-we
 .realscore.r3 { } .realscore.r3 b { color:#63e0b6; }
 .realscore.r1 { } .realscore.r1 b { color:#e5c26b; }
 .realscore.r0 { } .realscore.r0 b { color:#f19a98; }
+.pick { padding:10px 0; border-top:1px solid var(--line); }
+.pteams { display:flex; justify-content:space-between; gap:8px; font-size:.85rem; }
+.pteams .team { display:flex; align-items:center; gap:6px; }
+.pnums { display:grid; grid-template-columns:1fr 1fr 1fr; text-align:center; margin-top:8px; gap:6px; }
+.pnums span { display:block; font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; }
+.pnums b { font-size:1.1rem; }
+.pnums .r3 b { color:#63e0b6; } .pnums .r1 b { color:#e5c26b; } .pnums .r0 b { color:#f19a98; }
