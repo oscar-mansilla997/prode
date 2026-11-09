@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { isFree, money, points, sortMatches, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
 import { ask, copyText } from '../dialogs'
 import ShareButton, { appUrl } from '../Share'
-import { Crest, GroupRanking, fmtDate } from '../components'
+import { Crest, GroupRanking, History, fmtDate } from '../components'
 
 type Draft = Record<string, { h: string; a: string }>
 
@@ -58,6 +58,7 @@ export default function Player({ profile }: { profile: Profile }) {
         : !complete ? (
           <div className="card"><p>Completá tu perfil una sola vez para poder jugar.</p><Link to="/perfil" className="link">Ir a mi perfil</Link></div>
         ) : <Jugada group={group} entry={entry} ensureEntry={ensureEntry} profile={profile} onChange={setEntry} />}
+      <History name={group.name} exceptId={group.id} />
     </>
   )
 }

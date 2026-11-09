@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { isFinished, money, points, sortMatches, supabase, type Match, type Prediction, type PubGroup, type Row } from './supabase'
+import { isFinished, money, points, sortMatches, supabase, type Match, type Prediction, type Prode, type PubGroup, type Row } from './supabase'
 
 export function Avatar({ url, name, size = 36 }: { url?: string | null; name: string; size?: number }) {
   const st = { width: size, height: size, fontSize: size * 0.42 }
@@ -102,4 +102,34 @@ export const Icon = {
   shield: <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z" /></svg>,
   user: <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21c1-4 4-6 8-6s7 2 8 6" /></svg>,
   bell: <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0" /></svg>,
+}
+
+function HistoryItem({ p }: { p: Prode }) {
+  const [rows, setRows] = useState<Row[] | null>(null)
+  useEffect(() => { supabase.rpc('get_leaderboard', { gid: p.id }).then(({ data }) => setRows(((data as Row[]) ?? []).filter((r) => r.paid))) }, [p.id])
+  return (
+    <div className="card">
+      <div className="muted small" style={{ margin: 0 }}>{p.round ? `Fecha ${p.round}` : p.name}</div>
+      {rows === null ? <p className="muted small">Cargando…</p> : rows.length === 0 ? <p className="muted small">Sin participantes.</p> : rows.map((r, i) => (
+        <div key={r.entry_id} className="row" style={{ marginTop: 8 }}>
+          <span className="who"><span className="muted small" style={{ width: 16 }}>{i + 1}</span><Avatar url={r.avatar_url} name={r.name || '?'} size={28} /><strong>{r.name}</strong></span>
+          <span className="pts">{r.pts} pts</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Fechas ya terminadas de este campeonato: solo usuario y puntaje, escondido hasta que se abre */
+export function History({ name, exceptId }: { name: string; exceptId: string }) {
+  const [list, setList] = useState<Prode[]>([])
+  const [open, setOpen] = useState(false)
+  useEffect(() => { supabase.rpc('list_history').then(({ data }) => setList(((data as Prode[]) ?? []).filter((x) => x.name === name && x.id !== exceptId))) }, [name, exceptId])
+  if (list.length === 0) return null
+  return (
+    <>
+      <button className="ghost" onClick={() => setOpen(!open)}>{open ? 'Ocultar historial' : `Historial (${list.length} ${list.length === 1 ? 'fecha' : 'fechas'})`}</button>
+      {open && list.map((p) => <HistoryItem key={p.id} p={p} />)}
+    </>
+  )
 }
