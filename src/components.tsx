@@ -104,11 +104,11 @@ export const Icon = {
   bell: <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0" /></svg>,
 }
 
-type Pick = { home: string; away: string; home_logo: string | null; away_logo: string | null; kickoff: string; home_score: number | null; away_score: number | null; home_pred: number | null; away_pred: number | null }
+type PickRow = { home: string; away: string; home_logo: string | null; away_logo: string | null; kickoff: string; home_score: number | null; away_score: number | null; home_pred: number | null; away_pred: number | null }
 
 function Picks({ eid }: { eid: string }) {
-  const [l, setL] = useState<Pick[] | null>(null)
-  useEffect(() => { supabase.rpc('get_entry_picks', { eid }).then(({ data }) => setL((data as Pick[]) ?? [])) }, [eid])
+  const [l, setL] = useState<PickRow[] | null>(null)
+  useEffect(() => { supabase.rpc('get_entry_picks', { eid }).then(({ data }) => setL((data as PickRow[]) ?? [])) }, [eid])
   if (l === null) return <p className="muted small">Cargando…</p>
   let total = 0
   return (
