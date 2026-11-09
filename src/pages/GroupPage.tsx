@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { feeNum, isFinished, money, points, sortMatches, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
-import { ask, copyText, notice } from '../dialogs'
+import { ask, copyText, notice, toast } from '../dialogs'
 import ShareButton from '../Share'
 import { uploadCrest } from '../upload'
 import AutoImport, { importNext, refreshResults } from './AutoImport'
@@ -161,7 +161,8 @@ function Participants({ entries, matches, preds, reload }: { entries: Entry[]; m
 }
 
 function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match[]; reload: () => void }) {
-  const groupId = group.id
+  const nav = useNavigate()
+  const done = group.finish_notified
   const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
   const [err, setErr] = useState('')
   const [teams, setTeams] = useState<{ id: string; name: string; logo: string | null }[]>([])
@@ -184,17 +185,45 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
     })()
   }, [group.league_id])
 
+  // La fecha ya tuvo ganador: lo nuevo va a la fecha siguiente (se crea si no existe)
+  async function nextGroup(): Promise<Group | null> {
+    const r = await supabase.from('groups').select('*').eq('owner_id', group.owner_id).eq('name', group.name)
+    const nxt = ((r.data as Group[]) ?? [])
+      .filter((x) => (x.round ?? 0) > (group.round ?? 0) && x.league_id === group.league_id && x.season === group.season)
+      .sort((a, b) => (a.round ?? 0) - (b.round ?? 0))[0]
+    if (nxt) return nxt
+    const { data, error } = await supabase.from('groups').insert({
+      name: group.name, fee: group.fee, pay_alias: group.pay_alias, commission_pct: group.commission_pct, logo: group.logo,
+      league_id: group.league_id, season: group.season, round: (group.round ?? 0) + 1,
+    }).select().single()
+    if (error) { setErr(error.message); return null }
+    return data as Group
+  }
+  async function moveOpen() {
+    const open = matches.filter((m) => m.home_score === null)
+    const t = await nextGroup()
+    if (!t) return
+    const { error } = await supabase.from('matches').update({ group_id: t.id }).in('id', open.map((m) => m.id))
+    if (error) return setErr(error.message)
+    toast('Partidos pasados a la fecha siguiente')
+    nav(`/g/${t.id}`)
+  }
   async function add(e: React.FormEvent) {
     e.preventDefault()
     const h = teams.find((t) => t.id === f.home), a = teams.find((t) => t.id === f.away)
     if (!h || !a) return setErr('Elegí los dos equipos.')
     if (h.id === a.id) return setErr('Elegí dos equipos distintos.')
+    const target = done ? await nextGroup() : group
+    if (!target) return
     const { error } = await supabase.from('matches').insert({
-      group_id: groupId, round: f.round || null, home: h.name, away: a.name, home_logo: h.logo, away_logo: a.logo,
+      group_id: target.id, round: f.round || null, home: h.name, away: a.name, home_logo: h.logo, away_logo: a.logo,
       kickoff: new Date(f.kickoff).toISOString(),
     })
     setErr(error?.message ?? '')
-    if (!error) { setF({ ...f, home: '', away: '' }); reload() }
+    if (!error) {
+      setF({ ...f, home: '', away: '' })
+      if (done) { toast('Partido cargado en la fecha siguiente'); nav(`/g/${target.id}`) } else reload()
+    }
   }
   async function setResult(m: Match, hs: string, as: string) {
     const v = hs === '' || as === '' ? [null, null] : [+hs, +as]
@@ -212,6 +241,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
       {group.league_id && <AutoImport group={group} matches={matches} reload={reload} />}
       <form className="card" onSubmit={add}>
         <h3>Agregar partido</h3>
+        {done && <p className="small" style={{ color: 'var(--gold)' }}>Esta fecha ya tuvo ganador. El partido que cargues va a la fecha siguiente, con su propio pozo y ganador.</p>}
         {teams.length < 2 ? <p className="small muted">No hay equipos para elegir. Cargalos con su escudo en <strong>Admin → Equipos</strong>.</p> : (
           <>
             <label className="lbl">Fecha o ronda</label>
@@ -231,6 +261,12 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
         )}
         {err && <p className="msg">{err}</p>}
       </form>
+      {done && matches.some((m) => m.home_score === null) && (
+        <div className="card">
+          <p className="small">Hay partidos sin jugar en una fecha que ya tuvo ganador. Se pueden pasar a la fecha siguiente.</p>
+          <button className="primary" onClick={moveOpen}>Pasar los partidos sin jugar a la fecha siguiente</button>
+        </div>
+      )}
       <h3>Partidos y resultados</h3>
       {matches.map((m) => <ResultRow key={m.id} m={m} onSave={setResult} onDelete={remove} />)}
     </>
