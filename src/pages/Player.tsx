@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { isFree, money, points, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
+import { isFree, money, points, sortMatches, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
 import { ask, copyText } from '../dialogs'
 import ShareButton, { appUrl } from '../Share'
 import { Crest, GroupRanking, fmtDate } from '../components'
@@ -77,7 +77,7 @@ function Jugada({ group, entry, ensureEntry, profile, onChange }: { group: PubGr
         supabase.from('matches').select('*').eq('group_id', group.id).order('kickoff'),
         entry ? supabase.from('predictions').select('*').eq('entry_id', entry.id) : Promise.resolve({ data: [] }),
       ])
-      setMatches((m.data as Match[]) ?? [])
+      setMatches(sortMatches((m.data as Match[]) ?? []))
       const d: Draft = {}
       for (const x of (p.data ?? []) as { match_id: string; home_pred: number; away_pred: number }[])
         d[x.match_id] = { h: String(x.home_pred), a: String(x.away_pred) }

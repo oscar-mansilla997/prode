@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { feeNum, isFinished, money, points, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
+import { feeNum, isFinished, money, points, sortMatches, supabase, statusLabel, type Entry, type Group, type Match, type Prediction } from '../supabase'
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import { ask, copyText, notice } from '../dialogs'
 import ShareButton from '../Share'
@@ -29,7 +29,7 @@ export default function GroupPage() {
     ])
     const es = (e.data as Entry[]) ?? []
     setGroup(g.data as Group)
-    setMatches((m.data as Match[]) ?? [])
+    setMatches(sortMatches((m.data as Match[]) ?? []))
     setEntries(es)
     if (es.length) {
       const p = await supabase.from('predictions').select('*').in('entry_id', es.map((x) => x.id))

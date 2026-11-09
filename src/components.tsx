@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { isFinished, money, points, supabase, type Match, type Prediction, type PubGroup, type Row } from './supabase'
+import { isFinished, money, points, sortMatches, supabase, type Match, type Prediction, type PubGroup, type Row } from './supabase'
 
 export function Avatar({ url, name, size = 36 }: { url?: string | null; name: string; size?: number }) {
   const st = { width: size, height: size, fontSize: size * 0.42 }
@@ -57,7 +57,7 @@ export function PredList({ groupId, entryId, showPoints = true }: { groupId: str
         supabase.from('matches').select('*').eq('group_id', groupId).order('kickoff'),
         supabase.from('predictions').select('*').eq('entry_id', entryId),
       ])
-      setMs((m.data as Match[]) ?? []); setPs((p.data as Prediction[]) ?? [])
+      setMs(sortMatches((m.data as Match[]) ?? [])); setPs((p.data as Prediction[]) ?? [])
     })()
   }, [groupId, entryId])
   if (!ms) return <p className="muted small">Cargando…</p>

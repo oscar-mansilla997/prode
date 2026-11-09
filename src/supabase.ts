@@ -56,3 +56,10 @@ export function isFinished(matches: Match[]) {
 export const isFree = (fee: string | null) => (Number((fee ?? '').replace(/\D/g, '')) || 0) === 0
 export const feeNum = (fee: string | null) => Number((fee ?? '').replace(/\D/g, '')) || 0
 export const money = (n: number) => '$' + Math.round(n).toLocaleString('es-AR')
+
+// Primero los partidos por jugar (el más próximo arriba); abajo los ya jugados (el más reciente primero)
+export function sortMatches(list: Match[]): Match[] {
+  const open = list.filter((m) => m.home_score === null).sort((a, b) => +new Date(a.kickoff) - +new Date(b.kickoff))
+  const done = list.filter((m) => m.home_score !== null).sort((a, b) => +new Date(b.kickoff) - +new Date(a.kickoff))
+  return [...open, ...done]
+}
