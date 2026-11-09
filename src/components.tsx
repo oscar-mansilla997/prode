@@ -106,6 +106,16 @@ export const Icon = {
 
 function HistoryItem({ p }: { p: Prode }) {
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [mine, setMine] = useState<string | null>(null)
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    ;(async () => {
+      const uid = (await supabase.auth.getUser()).data.user?.id
+      const e = await supabase.from('entries').select('id, submitted_at').eq('group_id', p.id).eq('user_id', uid!).maybeSingle()
+      const row = e.data as { id: string; submitted_at: string | null } | null
+      setMine(row?.submitted_at ? row.id : null)
+    })()
+  }, [p.id])
   useEffect(() => { supabase.rpc('get_leaderboard', { gid: p.id }).then(({ data }) => setRows(((data as Row[]) ?? []).filter((r) => r.paid))) }, [p.id])
   return (
     <div className="card">
@@ -116,6 +126,8 @@ function HistoryItem({ p }: { p: Prode }) {
           <span className="pts">{r.pts} pts</span>
         </div>
       ))}
+      {mine && <button className="link" onClick={() => setShow(!show)}>{show ? 'Ocultar mi jugada' : 'Ver mi jugada'}</button>}
+      {mine && show && <PredList groupId={p.id} entryId={mine} />}
     </div>
   )
 }
