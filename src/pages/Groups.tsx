@@ -6,14 +6,17 @@ import { isFree, money, supabase, statusLabel, type Entry, type Prode } from '..
 
 export default function Groups() {
   const [prodes, setProdes] = useState<Prode[] | null>(null)
+  const [hist, setHist] = useState<Prode[]>([])
   const [mine, setMine] = useState<Record<string, Entry>>({})
 
   const load = useCallback(async () => {
     const uid = (await supabase.auth.getUser()).data.user?.id
-    const [p, e] = await Promise.all([
+    const [p, e, h] = await Promise.all([
       supabase.rpc('list_prodes'),
       supabase.from('entries').select('*, group:groups(id, code)').eq('user_id', uid!),
+      supabase.rpc('list_history'),
     ])
+    setHist(((h.data as Prode[]) ?? []).map((x) => ({ ...x, pot: Number(x.pot), players: Number(x.players) })))
     setProdes(((p.data as Prode[]) ?? []).map((x) => ({ ...x, matches: Number(x.matches), players: Number(x.players), pot: Number(x.pot) })))
     const map: Record<string, Entry> = {}
     for (const row of ((e.data as unknown as (Entry & { group: { code: string } })[]) ?? [])) map[row.group.code] = row
@@ -46,6 +49,19 @@ export default function Groups() {
             )
           })}
         </div>
+      )}
+      {hist.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 22 }}>Historial</h3>
+          {hist.map((p) => (
+            <Link key={p.id} to={`/p/${p.code}`} className="card">
+              <div className="row">
+                <span><strong>{p.name}</strong><div className="small muted" style={{ margin: 0 }}>{p.round ? `Fecha ${p.round} · ` : ''}terminada</div></span>
+                <span className="small muted" style={{ textAlign: 'right' }}>{p.players} jugaron{!isFree(p.fee) && <><br />Pozo {money(p.pot)}</>}</span>
+              </div>
+            </Link>
+          ))}
+        </>
       )}
     </>
   )
