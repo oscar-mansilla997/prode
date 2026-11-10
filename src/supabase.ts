@@ -34,6 +34,7 @@ export type Entry = {
   user_id: string
   status: 'pending' | 'approved' | 'rejected'
   submitted_at: string | null
+  num?: number
   profile?: Profile
 }
 export type Prediction = { entry_id: string; match_id: string; home_pred: number; away_pred: number }

@@ -10,7 +10,8 @@ type Draft = Record<string, { h: string; a: string }>
 export default function Player({ profile }: { profile: Profile }) {
   const { code } = useParams()
   const [group, setGroup] = useState<PubGroup | null | undefined>(undefined)
-  const [entry, setEntry] = useState<Entry | null | undefined>(undefined)
+  const [entries, setEntries] = useState<Entry[] | undefined>(undefined)
+  const [sel, setSel] = useState<string>('new')
   const [tab, setTab] = useState<'jugar' | 'ranking'>('jugar')
 
   useEffect(() => {
@@ -19,8 +20,10 @@ export default function Player({ profile }: { profile: Profile }) {
       const gr = (g.data as PubGroup[] | null)?.[0] ?? null
       setGroup(gr)
       if (gr) {
-        const e = await supabase.from('entries').select('*').eq('group_id', gr.id).eq('user_id', profile.id).maybeSingle()
-        setEntry((e.data as Entry) ?? null)
+        const e = await supabase.from('entries').select('*').eq('group_id', gr.id).eq('user_id', profile.id).order('num')
+        const list = (e.data as Entry[]) ?? []
+        setEntries(list)
+        setSel(list[0]?.id ?? 'new')
       }
     })()
   }, [code, profile.id])
@@ -29,9 +32,13 @@ export default function Player({ profile }: { profile: Profile }) {
     if (entry) return entry
     const { data, error } = await supabase.from('entries').insert({ group_id: group!.id }).select().single()
     if (error) throw new Error(error.message)
-    setEntry(data as Entry)
+    setEntries((l) => [...(l ?? []), data as Entry])
+    setSel((data as Entry).id)
     return data as Entry
   }
+  const setEntry = (e: Entry) => setEntries((l) => (l ?? []).map((x) => (x.id === e.id ? e : x)))
+  const entry: Entry | null | undefined = entries === undefined ? undefined : entries.find((x) => x.id === sel) ?? null
+  const hasOpen = entries !== undefined && entries.length < 5 && entries.every((x) => x.submitted_at) && !group?.finished
 
   if (group === undefined) return <p className="muted">Cargando…</p>
   if (group === null) return <div className="card"><h2>Link inválido</h2><p className="muted">Revisá el link que te pasó el organizador.</p></div>
@@ -50,9 +57,15 @@ export default function Player({ profile }: { profile: Profile }) {
       </div>
       <ShareButton text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra Sport y competí por el pozo:`} url={`${appUrl()}#/p/${code}`} label="Invitar amigos a este campeonato" />
       <div className="seg">
-        <button className={tab === 'jugar' ? 'on' : ''} onClick={() => setTab('jugar')}>{entry?.submitted_at ? 'Mi jugada' : 'Jugar'}</button>
+        <button className={tab === 'jugar' ? 'on' : ''} onClick={() => setTab('jugar')}>{entries?.some((x) => x.submitted_at) ? 'Mis jugadas' : 'Jugar'}</button>
         <button className={tab === 'ranking' ? 'on' : ''} onClick={() => setTab('ranking')}>Ranking</button>
       </div>
+      {tab === 'jugar' && entries !== undefined && complete && (entries.length > 0) && (
+        <div className="seg">
+          {entries.map((x) => <button key={x.id} className={sel === x.id ? 'on' : ''} onClick={() => setSel(x.id)}>Jugada {x.num ?? 1}</button>)}
+          {hasOpen && <button className={sel === 'new' ? 'on' : ''} onClick={() => setSel('new')}>+ Otra jugada</button>}
+        </div>
+      )}
       {tab === 'ranking' ? <GroupRanking group={group} meId={entry?.id} />
         : entry === undefined ? <p className="muted">Cargando…</p>
         : !complete ? (

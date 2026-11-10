@@ -147,7 +147,7 @@ export default function Admin() {
           <div key={r.id} className="card">
             <div className="row">
               <span className="who"><Avatar url={r.profile.avatar_url} name={r.profile.name} size={42} />
-                <span><strong>{r.profile.name}</strong><div className="small muted" style={{ margin: 0 }}>{r.group.name}</div></span></span>
+                <span><strong>{r.profile.name}{(r.num ?? 1) > 1 ? ` · Jugada ${r.num}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{r.group.name}</div></span></span>
               {r.group.fee && <strong style={{ color: 'var(--gold)' }}>{r.group.fee}</strong>}
             </div>
             <div className="small">Alias del jugador: <strong>{r.profile.alias}</strong></div>
