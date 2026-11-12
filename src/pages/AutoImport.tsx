@@ -187,7 +187,13 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
     } catch (e) { setMsg('No se pudo traer la lista: ' + (e as Error).message) }
     setBusy(false)
   }
-  const shown = (list ?? []).filter((e) => !have.has(String(e.idEvent)) && (all || !(SKIP.test(e.strHomeTeam ?? '') || SKIP.test(e.strAwayTeam ?? ''))))
+  const norm = (t: string | null) => (t ?? '').toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')
+  const dup = (e: Ev) => {
+    const t = new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').getTime()
+    return matches.some((m) => Math.abs(new Date(m.kickoff).getTime() - t) < 36e5 * 30 &&
+      ((norm(m.home) === norm(e.strHomeTeam) && norm(m.away) === norm(e.strAwayTeam)) || (norm(m.home) === norm(e.strAwayTeam) && norm(m.away) === norm(e.strHomeTeam))))
+  }
+  const shown = (list ?? []).filter((e) => !have.has(String(e.idEvent)) && !dup(e) && (all || !(SKIP.test(e.strHomeTeam ?? '') || SKIP.test(e.strAwayTeam ?? ''))))
   const toggle = (id: string) => setPick((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
 
   async function add() {
