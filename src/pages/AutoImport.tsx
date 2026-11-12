@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DEMO, supabase, type Group, type Match } from '../supabase'
 import { Crest, fmtDate } from '../components'
 
@@ -145,6 +145,24 @@ export default function AutoImport({ group, matches, reload }: { group: Group; m
   )
 }
 
+const crestCache = new Map<string, string | null>()
+/** Escudo de una selección o club buscando su nombre en TheSportsDB */
+async function crestFor(name: string): Promise<string | null> {
+  const q = name.trim()
+  if (q.length < 3) return null
+  const k = q.toLowerCase()
+  if (crestCache.has(k)) return crestCache.get(k)!
+  let url: string | null = null
+  try {
+    const res = await fetch(`${BASE}/searchteams.php?t=${encodeURIComponent(q)}`)
+    const teams = res.ok ? (((await res.json()).teams as Ev[] | null) ?? []).filter((t) => t.strSport === 'Soccer') : []
+    const t = teams.find((x) => (x.strTeam ?? '').toLowerCase() === k) ?? teams[0]
+    url = (t?.strBadge ?? t?.strTeamBadge ?? null) as string | null
+  } catch { /* sin escudo */ }
+  crestCache.set(k, url)
+  return url
+}
+
 const SKIP = /\b(U-?\d{2}|women|femenin|\(w\)| W$)/i
 
 /** Amistosos: se eligen de la lista de los próximos días (no tienen fechas numeradas) */
@@ -191,12 +209,21 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
     setBusy(false)
   }
   const [man, setMan] = useState({ home: '', away: '', when: '' })
+  const [mc, setMc] = useState<{ home: string | null; away: string | null }>({ home: null, away: null })
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      const [h, a] = await Promise.all([crestFor(man.home), crestFor(man.away)])
+      setMc({ home: h, away: a })
+    }, 500)
+    return () => clearTimeout(t)
+  }, [man.home, man.away])
   async function addManual(ev: React.FormEvent) {
     ev.preventDefault()
     if (!man.home.trim() || !man.away.trim() || !man.when) return setMsg('Completá los dos equipos y el día y la hora.')
     setBusy(true); setMsg('')
     const { error } = await supabase.from('matches').insert({
       group_id: group.id, round: 'Amistoso', home: man.home.trim(), away: man.away.trim(), kickoff: new Date(man.when).toISOString(),
+      home_logo: mc.home, away_logo: mc.away,
     })
     if (!error && !group.league_id) await supabase.from('groups').update({ league_id: FRIENDLIES }).eq('id', group.id)
     setBusy(false)
@@ -220,6 +247,16 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
         <input value={man.away} onChange={(e) => setMan({ ...man, away: e.target.value })} placeholder="Ej: Uruguay" />
         <label className="lbl">Día y hora (hora de Argentina)</label>
         <input type="datetime-local" value={man.when} onChange={(e) => setMan({ ...man, when: e.target.value })} />
+        {(man.home.trim() || man.away.trim()) && (
+          <div className="card match">
+            <div className="muted small" style={{ margin: 0 }}>Así va a quedar{man.when ? ' · ' + fmtDate(new Date(man.when).toISOString()) : ''}</div>
+            <div className="teams" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+              <span className="team"><Crest url={mc.home} />{man.home || '—'}</span>
+              <span className="muted">vs</span>
+              <span className="team right">{man.away || '—'}<Crest url={mc.away} /></span>
+            </div>
+          </div>
+        )}
         <button className="primary" disabled={busy}>Agregar partido</button>
       </form>
       <h3>O elegilo de la lista</h3>
@@ -248,7 +285,7 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
           {pick.size > 0 && <div className="stickybar"><button className="primary" disabled={busy} onClick={add}>Agregar {pick.size} partido(s)</button></div>}
         </>
       )}
-      <p className="small muted">Los partidos cargados a mano no tienen escudo y el resultado lo cargás vos en la lista de abajo.</p>
+      <p className="small muted">El escudo se busca solo por el nombre, escribilo en inglés si no aparece (ej: United States). El resultado de estos partidos lo cargás vos en la lista de abajo.</p>
       <button className="ghost" disabled={busy} onClick={results}>Actualizar resultados</button>
       {msg && <p className="small">{msg}</p>}
     </div>
