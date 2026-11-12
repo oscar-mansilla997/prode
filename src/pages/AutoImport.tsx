@@ -14,6 +14,7 @@ export const LEAGUES = [
   { id: 4331, name: 'Bundesliga (Alemania)' },
   { id: 4334, name: 'Ligue 1 (Francia)' },
   { id: 4429, name: 'Mundial FIFA' },
+  { id: 4562, name: 'Amistosos internacionales' },
 ]
 
 type Ev = Record<string, string | null>
