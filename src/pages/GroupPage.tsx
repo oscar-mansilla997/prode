@@ -238,7 +238,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   return (
     <>
       <ReviewBanner group={group} matches={matches} reload={reload} />
-      {group.league_id === FRIENDLIES && <Amistosos group={group} matches={matches} reload={reload} />}
+      {(group.league_id === FRIENDLIES || !group.league_id) && <Amistosos group={group} matches={matches} reload={reload} />}
       {group.league_id && group.league_id !== FRIENDLIES && <AutoImport group={group} matches={matches} reload={reload} />}
       <form className="card" onSubmit={add}>
         <h3>Agregar partido</h3>

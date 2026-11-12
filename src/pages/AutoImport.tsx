@@ -167,6 +167,7 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
       }))
       const up = await supabase.from('matches').upsert(rows, { onConflict: 'group_id,external_id' })
       if (up.error) throw new Error(up.error.message)
+      if (!group.league_id) await supabase.from('groups').update({ league_id: FRIENDLIES }).eq('id', group.id)
       setPick(new Set()); setMsg(`Listo: sumaste ${rows.length} partidos.`); reload()
     } catch (e) { setMsg((e as Error).message) }
     setBusy(false)
