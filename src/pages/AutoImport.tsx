@@ -184,18 +184,18 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
       <button className="primary" disabled={busy} onClick={load}>{busy ? 'Buscando…' : list ? 'Actualizar lista' : 'Traer amistosos'}</button>
       {list && list.length > 0 && (
         <>
-          <label className="small muted" style={{ display: 'block', margin: '8px 0' }}>
-            <input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Mostrar también sub-20, sub-23 y femenino
-          </label>
-          {pick.size > 0 && <button className="primary" disabled={busy} onClick={add}>Agregar {pick.size} partido(s) al campeonato</button>}
-          {pick.size === 0 && <p className="small muted">Tocá los partidos que quieras. Después aparece el botón verde para agregarlos.</p>}
-          {shown.map((e) => (
-            <label key={String(e.idEvent)} className="row" style={{ padding: '6px 0' }}>
-              <span><input type="checkbox" checked={pick.has(String(e.idEvent))} onChange={() => toggle(String(e.idEvent))} /> {e.strHomeTeam} vs {e.strAwayTeam}</span>
-              <span className="small muted">{fmtDate(new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').toISOString())}</span>
-            </label>
-          ))}
-          {pick.size > 0 && <button className="primary" disabled={busy} onClick={add}>Agregar {pick.size} partido(s)</button>}
+          <button className="ghost" onClick={() => setAll(!all)}>{all ? 'Ocultar sub-20, sub-23 y femenino' : 'Mostrar también sub-20, sub-23 y femenino'}</button>
+          <p className="small muted">Tocá los partidos que quieras agregar.</p>
+          {shown.map((e) => {
+            const on = pick.has(String(e.idEvent))
+            return (
+              <button key={String(e.idEvent)} className={`amis ${on ? 'on' : ''}`} onClick={() => toggle(String(e.idEvent))}>
+                <span>{on ? '✓ ' : ''}{e.strHomeTeam} vs {e.strAwayTeam}</span>
+                <span className="small muted">{fmtDate(new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').toISOString())}</span>
+              </button>
+            )
+          })}
+          {pick.size > 0 && <div className="stickybar"><button className="primary" disabled={busy} onClick={add}>Agregar {pick.size} partido(s)</button></div>}
         </>
       )}
       <button className="ghost" disabled={busy} onClick={results}>Actualizar resultados</button>

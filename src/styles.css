@@ -155,3 +155,6 @@ label.small.muted, .lbl { display:block; color:#b4bfd0; font-size:.8rem; font-we
 .pnums span { display:block; font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; }
 .pnums b { font-size:1.1rem; }
 .pnums .r3 b { color:#63e0b6; } .pnums .r1 b { color:#e5c26b; } .pnums .r0 b { color:#f19a98; }
+.amis { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; text-align:left; margin:6px 0; padding:12px; border-radius:12px; background:var(--card); border:1px solid var(--line); color:var(--txt); }
+.amis.on { border-color:var(--acc); background:#0f2a24; }
+.stickybar { position:sticky; bottom:76px; padding:8px 0; background:linear-gradient(transparent, var(--bg) 40%); z-index:5; }
