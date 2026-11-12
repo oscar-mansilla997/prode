@@ -32,7 +32,20 @@ for (const r of rows) {
   rounds.set(`${r.league_id}|${r.season}|${n}`, { league: Number(r.league_id), season: String(r.season), round: n })
 }
 let updated = 0
+// Amistosos: no tienen fechas numeradas, se consulta cada partido
+for (const r of rows.filter((x) => Number(x.league_id) === 4562)) {
+  const id = String(r.external_id).replace(/\D/g, '')
+  const res = await fetch(`https://www.thesportsdb.com/api/v1/json/123/lookupevent.php?id=${id}`)
+  const e = res.ok ? ((await res.json()).events ?? [])[0] : null
+  if (!e || !['FT', 'AET', 'PEN'].includes(e.strStatus) || e.intHomeScore == null || e.intAwayScore == null) continue
+  const h = Number(e.intHomeScore), a = Number(e.intAwayScore)
+  if (!id || !Number.isInteger(h) || !Number.isInteger(a)) continue
+  const out = await sql(`update matches set home_score = ${h}, away_score = ${a}
+    where external_id = '${id}' and not score_manual and (home_score is distinct from ${h} or away_score is distinct from ${a}) returning id`)
+  updated += out.length
+}
 for (const { league, season, round } of rounds.values()) {
+  if (league === 4562) continue
   const res = await fetch(`https://www.thesportsdb.com/api/v1/json/123/eventsround.php?id=${league}&r=${round}&s=${encodeURIComponent(season)}`)
   if (!res.ok) { console.log('Fuente respondió', res.status); continue }
   const events = (await res.json()).events ?? []
