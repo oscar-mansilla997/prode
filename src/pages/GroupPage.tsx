@@ -5,7 +5,7 @@ import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import { ask, copyText, notice, toast } from '../dialogs'
 import ShareButton from '../Share'
 import { uploadCrest } from '../upload'
-import AutoImport, { Amistosos, FRIENDLIES, importNext, refreshResults } from './AutoImport'
+import AutoImport, { Amistosos, FRIENDLIES, crestFor, importNext, refreshResults } from './AutoImport'
 
 type Tab = 'participantes' | 'partidos' | 'ranking' | 'ajustes'
 
@@ -165,6 +165,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   const done = group.finish_notified
   const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
   const [err, setErr] = useState('')
+  const [fc, setFc] = useState<{ home: string | null; away: string | null }>({ home: null, away: null })
   const [teams, setTeams] = useState<{ id: string; name: string; logo: string | null }[]>([])
   useEffect(() => {
     ;(async () => {
@@ -208,11 +209,22 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
     toast('Partidos pasados a la fecha siguiente')
     nav(`/g/${t.id}`)
   }
+  const known = (n: string) => teams.find((t) => t.name.toLowerCase() === n.trim().toLowerCase())
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      const [h, a] = await Promise.all([
+        known(f.home)?.logo ?? crestFor(f.home),
+        known(f.away)?.logo ?? crestFor(f.away),
+      ])
+      setFc({ home: h ?? null, away: a ?? null })
+    }, 500)
+    return () => clearTimeout(t)
+  }, [f.home, f.away, teams])
   async function add(e: React.FormEvent) {
     e.preventDefault()
-    const h = teams.find((t) => t.id === f.home), a = teams.find((t) => t.id === f.away)
-    if (!h || !a) return setErr('Elegí los dos equipos.')
-    if (h.id === a.id) return setErr('Elegí dos equipos distintos.')
+    const h = { name: f.home.trim(), logo: fc.home }, a = { name: f.away.trim(), logo: fc.away }
+    if (!h.name || !a.name) return setErr('Escribí los dos equipos.')
+    if (h.name.toLowerCase() === a.name.toLowerCase()) return setErr('Elegí dos equipos distintos.')
     const target = done ? await nextGroup() : group
     if (!target) return
     const { error } = await supabase.from('matches').insert({
@@ -238,28 +250,33 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   return (
     <>
       <ReviewBanner group={group} matches={matches} reload={reload} />
-      {(Number(group.league_id) === FRIENDLIES || !group.league_id) && <Amistosos group={group} matches={matches} reload={reload} />}
+      {Number(group.league_id) === FRIENDLIES && <Amistosos group={group} matches={matches} reload={reload} />}
       {group.league_id && Number(group.league_id) !== FRIENDLIES && <AutoImport group={group} matches={matches} reload={reload} />}
       <form className="card" onSubmit={add}>
         <h3>Agregar partido</h3>
         {done && <p className="small" style={{ color: 'var(--gold)' }}>Esta fecha ya tuvo ganador. El partido que cargues va a la fecha siguiente, con su propio pozo y ganador.</p>}
-        {teams.length < 2 ? <p className="small muted">No hay equipos para elegir. Cargalos con su escudo en <strong>Admin → Equipos</strong>.</p> : (
-          <>
-            <label className="lbl">Fecha o ronda</label>
-            <input placeholder="Ej: Fecha 1" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
-            <label className="lbl">Equipo local</label>
-            <select value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required>
-              <option value="">Local…</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-            <label className="lbl">Equipo visitante</label>
-            <select value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required>
-              <option value="">Visitante…</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-            <label className="lbl">Día y hora del partido</label>
-            <input type="datetime-local" value={f.kickoff} onChange={(e) => setF({ ...f, kickoff: e.target.value })} required />
-            <button className="primary">Agregar partido</button>
-          </>
-        )}
+        <>
+          <label className="lbl">Fecha o ronda</label>
+          <input placeholder="Ej: Fecha 1" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
+          <datalist id="equipos">{teams.map((t) => <option key={t.id} value={t.name} />)}</datalist>
+          <label className="lbl">Equipo local</label>
+          <input list="equipos" placeholder="Escribí el nombre" value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required />
+          <label className="lbl">Equipo visitante</label>
+          <input list="equipos" placeholder="Escribí el nombre" value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required />
+          <label className="lbl">Día y hora del partido</label>
+          <input type="datetime-local" value={f.kickoff} onChange={(e) => setF({ ...f, kickoff: e.target.value })} required />
+          {(f.home.trim() || f.away.trim()) && (
+            <div className="card match">
+              <div className="muted small" style={{ margin: 0 }}>Así va a quedar{f.kickoff ? ' · ' + fmtDate(new Date(f.kickoff).toISOString()) : ''}</div>
+              <div className="teams" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+                <span className="team"><Crest url={fc.home} />{f.home || '—'}</span>
+                <span className="muted">vs</span>
+                <span className="team right">{f.away || '—'}<Crest url={fc.away} /></span>
+              </div>
+            </div>
+          )}
+          <button className="primary">Agregar partido</button>
+        </>
         {err && <p className="msg">{err}</p>}
       </form>
       {done && matches.some((m) => m.home_score === null) && (

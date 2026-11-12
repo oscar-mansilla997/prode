@@ -147,7 +147,7 @@ export default function AutoImport({ group, matches, reload }: { group: Group; m
 
 const crestCache = new Map<string, string | null>()
 /** Escudo de una selección o club buscando su nombre en TheSportsDB */
-async function crestFor(name: string): Promise<string | null> {
+export async function crestFor(name: string): Promise<string | null> {
   const q = name.trim()
   if (q.length < 3) return null
   const k = q.toLowerCase()
