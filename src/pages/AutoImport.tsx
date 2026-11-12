@@ -93,7 +93,7 @@ export async function importFollowing(group: Group, matches: Match[]): Promise<s
 export async function refreshResults(group: Group, matches: Match[]): Promise<void> {
   if (!group.league_id || !group.season) return
   const mine = matches.filter((m) => m.external_id)
-  if (group.league_id === FRIENDLIES) {
+  if (Number(group.league_id) === FRIENDLIES) {
     for (const m of mine.filter((x) => x.home_score === null && new Date(x.kickoff) < new Date())) {
       const [e] = await getEvents(`lookupevent.php?id=${m.external_id}`)
       if (e) await applyScores(group.id, [e])

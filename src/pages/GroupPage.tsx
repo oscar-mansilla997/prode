@@ -238,8 +238,8 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   return (
     <>
       <ReviewBanner group={group} matches={matches} reload={reload} />
-      {(group.league_id === FRIENDLIES || !group.league_id) && <Amistosos group={group} matches={matches} reload={reload} />}
-      {group.league_id && group.league_id !== FRIENDLIES && <AutoImport group={group} matches={matches} reload={reload} />}
+      {(Number(group.league_id) === FRIENDLIES || !group.league_id) && <Amistosos group={group} matches={matches} reload={reload} />}
+      {group.league_id && Number(group.league_id) !== FRIENDLIES && <AutoImport group={group} matches={matches} reload={reload} />}
       <form className="card" onSubmit={add}>
         <h3>Agregar partido</h3>
         {done && <p className="small" style={{ color: 'var(--gold)' }}>Esta fecha ya tuvo ganador. El partido que cargues va a la fecha siguiente, con su propio pozo y ganador.</p>}
