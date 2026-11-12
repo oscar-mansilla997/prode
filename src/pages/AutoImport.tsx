@@ -190,6 +190,19 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
     } catch (e) { setMsg((e as Error).message) }
     setBusy(false)
   }
+  const [man, setMan] = useState({ home: '', away: '', when: '' })
+  async function addManual(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!man.home.trim() || !man.away.trim() || !man.when) return setMsg('Completá los dos equipos y el día y la hora.')
+    setBusy(true); setMsg('')
+    const { error } = await supabase.from('matches').insert({
+      group_id: group.id, round: 'Amistoso', home: man.home.trim(), away: man.away.trim(), kickoff: new Date(man.when).toISOString(),
+    })
+    if (!error && !group.league_id) await supabase.from('groups').update({ league_id: FRIENDLIES }).eq('id', group.id)
+    setBusy(false)
+    if (error) return setMsg(error.message)
+    setMan({ home: '', away: '', when: '' }); setMsg('Partido agregado.'); reload()
+  }
   async function results() {
     setBusy(true); setMsg('')
     try { await refreshResults(group, matches); setMsg('Resultados al día.'); reload() } catch (e) { setMsg('No se pudo actualizar: ' + (e as Error).message) }
@@ -224,6 +237,17 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
           {pick.size > 0 && <div className="stickybar"><button className="primary" disabled={busy} onClick={add}>Agregar {pick.size} partido(s)</button></div>}
         </>
       )}
+      <h3>¿No está el partido? Cargalo a mano</h3>
+      <form onSubmit={addManual}>
+        <label className="lbl">Equipo local</label>
+        <input value={man.home} onChange={(e) => setMan({ ...man, home: e.target.value })} placeholder="Ej: Argentina" />
+        <label className="lbl">Equipo visitante</label>
+        <input value={man.away} onChange={(e) => setMan({ ...man, away: e.target.value })} placeholder="Ej: Uruguay" />
+        <label className="lbl">Día y hora (hora de Argentina)</label>
+        <input type="datetime-local" value={man.when} onChange={(e) => setMan({ ...man, when: e.target.value })} />
+        <button className="primary" disabled={busy}>Agregar partido</button>
+      </form>
+      <p className="small muted">Los partidos cargados a mano no tienen escudo y el resultado lo cargás vos en la lista de abajo.</p>
       <button className="ghost" disabled={busy} onClick={results}>Actualizar resultados</button>
       {msg && <p className="small">{msg}</p>}
     </div>
