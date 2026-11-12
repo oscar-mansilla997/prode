@@ -161,3 +161,6 @@ label.small.muted, .lbl { display:block; color:#b4bfd0; font-size:.8rem; font-we
 .amis-check { font-size:.7rem; color:var(--muted); }
 .amis-check.on { color:var(--acc); font-weight:700; }
 .stickybar { position:sticky; bottom:76px; padding:8px 0; background:linear-gradient(transparent, var(--bg) 40%); z-index:5; }
+.cta { display:block; text-align:center; margin-top:14px; padding:13px; border-radius:12px; background:var(--card2); border:1px solid var(--acc); color:var(--acc); font-weight:700; text-decoration:none; }
+.sub { display:flex; justify-content:flex-end; gap:10px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
+.sub button { margin-top:0; width:auto; }

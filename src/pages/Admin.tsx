@@ -115,12 +115,12 @@ export default function Admin() {
           <span><strong>{g.name}{g.round ? ` · Fecha ${g.round}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{LEAGUES.find((l) => l.id === g.league_id)?.name ?? 'Campeonato propio'}</div></span></span>
         <button className={`toggle ${g.active ? 'on' : ''}`} disabled={busy} onClick={() => setActive(g, !g.active)}>{g.active ? 'Visible' : 'Oculto'}</button>
       </div>
-      <div className="actions">
-        <Link to={`/g/${g.id}`} className="link">Administrar ›</Link>
+      <Link to={`/g/${g.id}`} className="cta">Administrar</Link>
+      <div className="sub">
         {g.finish_notified && g.league_id && !groups.some((x) => x.league_id === g.league_id && x.season === g.season && (x.round ?? 0) > (g.round ?? 0)) && (
-          <button className="ghost small" disabled={busy} onClick={() => createNext(g)}>Crear la fecha siguiente a mano</button>
+          <button className="ghost small" disabled={busy} onClick={() => createNext(g)}>Crear fecha siguiente</button>
         )}
-        <button className="danger" disabled={busy} onClick={() => removeGroup(g)}>Eliminar</button>
+        <button className="danger small" disabled={busy} onClick={() => removeGroup(g)}>Eliminar</button>
       </div>
     </div>
   )
