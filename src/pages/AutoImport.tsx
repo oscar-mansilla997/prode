@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DEMO, supabase, type Group, type Match } from '../supabase'
-import { fmtDate } from '../components'
+import { Crest, fmtDate } from '../components'
 
 // Fuente gratuita: TheSportsDB (clave pública "123")
 const BASE = 'https://www.thesportsdb.com/api/v1/json/123'
@@ -188,10 +188,18 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
           <p className="small muted">Tocá los partidos que quieras agregar.</p>
           {shown.map((e) => {
             const on = pick.has(String(e.idEvent))
+            const ko = new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').toISOString()
             return (
-              <button key={String(e.idEvent)} className={`amis ${on ? 'on' : ''}`} onClick={() => toggle(String(e.idEvent))}>
-                <span>{on ? '✓ ' : ''}{e.strHomeTeam} vs {e.strAwayTeam}</span>
-                <span className="small muted">{fmtDate(new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').toISOString())}</span>
+              <button key={String(e.idEvent)} className={`card match amis ${on ? 'on' : ''}`} onClick={() => toggle(String(e.idEvent))}>
+                <div className="row">
+                  <div className="muted small" style={{ margin: 0 }}>{fmtDate(ko)}</div>
+                  <span className={`amis-check ${on ? 'on' : ''}`}>{on ? '✓ Elegido' : 'Tocar para elegir'}</span>
+                </div>
+                <div className="teams">
+                  <span className="team"><Crest url={e.strHomeTeamBadge ?? null} />{e.strHomeTeam}</span>
+                  <span className="muted">vs</span>
+                  <span className="team right">{e.strAwayTeam}<Crest url={e.strAwayTeamBadge ?? null} /></span>
+                </div>
               </button>
             )
           })}
