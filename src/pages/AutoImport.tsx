@@ -212,6 +212,17 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
     <div className="card">
       <h3>Amistosos internacionales</h3>
       <p className="small muted">Traé la lista de los próximos 10 días y tildá los partidos que quieras en este campeonato.</p>
+      <h3>Cargar un partido a mano (ej: Argentina)</h3>
+      <form onSubmit={addManual}>
+        <label className="lbl">Equipo local</label>
+        <input value={man.home} onChange={(e) => setMan({ ...man, home: e.target.value })} placeholder="Ej: Argentina" />
+        <label className="lbl">Equipo visitante</label>
+        <input value={man.away} onChange={(e) => setMan({ ...man, away: e.target.value })} placeholder="Ej: Uruguay" />
+        <label className="lbl">Día y hora (hora de Argentina)</label>
+        <input type="datetime-local" value={man.when} onChange={(e) => setMan({ ...man, when: e.target.value })} />
+        <button className="primary" disabled={busy}>Agregar partido</button>
+      </form>
+      <h3>O elegilo de la lista</h3>
       <button className="primary" disabled={busy} onClick={load}>{busy ? 'Buscando…' : list ? 'Actualizar lista' : 'Traer amistosos'}</button>
       {list && list.length > 0 && (
         <>
@@ -237,16 +248,6 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
           {pick.size > 0 && <div className="stickybar"><button className="primary" disabled={busy} onClick={add}>Agregar {pick.size} partido(s)</button></div>}
         </>
       )}
-      <h3>¿No está el partido? Cargalo a mano</h3>
-      <form onSubmit={addManual}>
-        <label className="lbl">Equipo local</label>
-        <input value={man.home} onChange={(e) => setMan({ ...man, home: e.target.value })} placeholder="Ej: Argentina" />
-        <label className="lbl">Equipo visitante</label>
-        <input value={man.away} onChange={(e) => setMan({ ...man, away: e.target.value })} placeholder="Ej: Uruguay" />
-        <label className="lbl">Día y hora (hora de Argentina)</label>
-        <input type="datetime-local" value={man.when} onChange={(e) => setMan({ ...man, when: e.target.value })} />
-        <button className="primary" disabled={busy}>Agregar partido</button>
-      </form>
       <p className="small muted">Los partidos cargados a mano no tienen escudo y el resultado lo cargás vos en la lista de abajo.</p>
       <button className="ghost" disabled={busy} onClick={results}>Actualizar resultados</button>
       {msg && <p className="small">{msg}</p>}
