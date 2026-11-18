@@ -5,7 +5,7 @@ import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import { ask, copyText, notice, toast } from '../dialogs'
 import ShareButton from '../Share'
 import { uploadCrest } from '../upload'
-import AutoImport, { Amistosos, FRIENDLIES, crestFor, importNext, refreshResults } from './AutoImport'
+import AutoImport, { EventPicker, FRIENDLIES, crestFor, importNext, refreshResults } from './AutoImport'
 
 type Tab = 'participantes' | 'partidos' | 'ranking' | 'ajustes'
 
@@ -250,7 +250,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   return (
     <>
       <ReviewBanner group={group} matches={matches} reload={reload} />
-      {Number(group.league_id) === FRIENDLIES && <Amistosos group={group} matches={matches} reload={reload} />}
+      {(!group.league_id || Number(group.league_id) === FRIENDLIES) && <EventPicker group={group} matches={matches} reload={reload} />}
       {group.league_id && Number(group.league_id) !== FRIENDLIES && <AutoImport group={group} matches={matches} reload={reload} />}
       <form className="card" onSubmit={add}>
         <h3>Agregar partido</h3>

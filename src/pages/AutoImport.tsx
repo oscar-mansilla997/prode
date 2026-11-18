@@ -109,15 +109,15 @@ export async function importFollowing(group: Group, matches: Match[]): Promise<s
 
 /** Carga los resultados de los partidos ya jugados. */
 export async function refreshResults(group: Group, matches: Match[]): Promise<void> {
-  if (!group.league_id || !group.season) return
   const mine = matches.filter((m) => m.external_id)
-  if (Number(group.league_id) === FRIENDLIES) {
+  if (!group.league_id || Number(group.league_id) === FRIENDLIES) {
     for (const m of mine.filter((x) => x.home_score === null && new Date(x.kickoff) < new Date())) {
       const [e] = await getEvents(`lookupevent.php?id=${m.external_id}`)
       if (e) await applyScores(group.id, [e])
     }
     return
   }
+  if (!group.season) return
   const need = new Set(mine.filter((m) => m.home_score === null && new Date(m.kickoff) < new Date()).map(roundNum))
   for (const r of need) {
     const list = (await getEvents(`eventsround.php?id=${group.league_id}&r=${r}&s=${group.season}`))
@@ -166,24 +166,27 @@ export async function crestFor(name: string): Promise<string | null> {
 const SKIP = /\b(U-?\d{2}|women|femenin|\(w\)| W$)/i
 
 /** Amistosos: se eligen de la lista de los próximos días (no tienen fechas numeradas) */
-export function Amistosos({ group, matches, reload }: { group: Group; matches: Match[]; reload: () => void }) {
+export function EventPicker({ group, matches, reload }: { group: Group; matches: Match[]; reload: () => void }) {
   const [list, setList] = useState<Ev[] | null>(null)
   const [pick, setPick] = useState<Set<string>>(new Set())
   const [all, setAll] = useState(false)
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const have = new Set(matches.map((m) => m.external_id))
+  const mixed = !group.league_id
+  const [lg, setLg] = useState<number>(FRIENDLIES)
+  const lgName = LEAGUES.find((l) => l.id === lg)?.name ?? ''
 
   async function load() {
     setBusy(true); setMsg('')
     try {
       const today = new Date().toISOString().slice(0, 10)
       const days = Array.from({ length: 10 }, (_, i) => addDays(today, i))
-      const res = await Promise.all(days.map((d) => getEvents(`eventsday.php?d=${d}&l=${FRIENDLIES}`).catch(() => [] as Ev[])))
-      const ev = res.flat().filter((e) => String(e.idLeague) === String(FRIENDLIES) && e.idEvent && e.strHomeTeam && e.strAwayTeam)
+      const res = await Promise.all(days.map((d) => getEvents(`eventsday.php?d=${d}&l=${lg}`).catch(() => [] as Ev[])))
+      const ev = res.flat().filter((e) => String(e.idLeague) === String(lg) && e.idEvent && e.strHomeTeam && e.strAwayTeam)
       ev.sort((a, b) => String(a.strTimestamp ?? a.dateEvent).localeCompare(String(b.strTimestamp ?? b.dateEvent)))
       setList(ev)
-      if (!ev.length) setMsg('No hay amistosos cargados en la fuente para los próximos 10 días.')
+      if (!ev.length) setMsg('No hay partidos cargados en la fuente para los próximos 10 días.')
     } catch (e) { setMsg('No se pudo traer la lista: ' + (e as Error).message) }
     setBusy(false)
   }
@@ -193,7 +196,7 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
     return matches.some((m) => Math.abs(new Date(m.kickoff).getTime() - t) < 36e5 * 30 &&
       ((norm(m.home) === norm(e.strHomeTeam) && norm(m.away) === norm(e.strAwayTeam)) || (norm(m.home) === norm(e.strAwayTeam) && norm(m.away) === norm(e.strHomeTeam))))
   }
-  const shown = (list ?? []).filter((e) => !have.has(String(e.idEvent)) && !dup(e) && (all || !(SKIP.test(e.strHomeTeam ?? '') || SKIP.test(e.strAwayTeam ?? ''))))
+  const shown = (list ?? []).filter((e) => !have.has(String(e.idEvent)) && !dup(e) && (all || lg !== FRIENDLIES || !(SKIP.test(e.strHomeTeam ?? '') || SKIP.test(e.strAwayTeam ?? ''))))
   const toggle = (id: string) => setPick((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
 
   async function add() {
@@ -202,14 +205,13 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
     setBusy(true); setMsg('')
     try {
       const rows = chosen.map((e) => ({
-        group_id: group.id, external_id: String(e.idEvent), round: 'Amistoso',
+        group_id: group.id, external_id: String(e.idEvent), round: lgName,
         home: e.strHomeTeam, away: e.strAwayTeam,
         kickoff: new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').toISOString(),
         home_logo: e.strHomeTeamBadge ?? null, away_logo: e.strAwayTeamBadge ?? null,
       }))
       const up = await supabase.from('matches').upsert(rows, { onConflict: 'group_id,external_id' })
       if (up.error) throw new Error(up.error.message)
-      if (!group.league_id) await supabase.from('groups').update({ league_id: FRIENDLIES }).eq('id', group.id)
       setPick(new Set()); setMsg(`Listo: sumaste ${rows.length} partidos.`); reload()
     } catch (e) { setMsg((e as Error).message) }
     setBusy(false)
@@ -228,10 +230,9 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
     if (!man.home.trim() || !man.away.trim() || !man.when) return setMsg('Completá los dos equipos y el día y la hora.')
     setBusy(true); setMsg('')
     const { error } = await supabase.from('matches').insert({
-      group_id: group.id, round: 'Amistoso', home: man.home.trim(), away: man.away.trim(), kickoff: new Date(man.when).toISOString(),
+      group_id: group.id, round: mixed ? null : 'Amistoso', home: man.home.trim(), away: man.away.trim(), kickoff: new Date(man.when).toISOString(),
       home_logo: mc.home, away_logo: mc.away,
     })
-    if (!error && !group.league_id) await supabase.from('groups').update({ league_id: FRIENDLIES }).eq('id', group.id)
     setBusy(false)
     if (error) return setMsg(error.message)
     setMan({ home: '', away: '', when: '' }); setMsg('Partido agregado.'); reload()
@@ -243,8 +244,16 @@ export function Amistosos({ group, matches, reload }: { group: Group; matches: M
   }
   return (
     <div className="card">
-      <h3>Amistosos internacionales</h3>
-      <p className="small muted">Traé la lista de los próximos 10 días y tildá los partidos que quieras en este campeonato.</p>
+      <h3>{mixed ? 'Traer partidos de una competición' : 'Amistosos internacionales'}</h3>
+      <p className="small muted">Traé la lista de los próximos 10 días y tocá los partidos que quieras en este campeonato.</p>
+      {mixed && (
+        <>
+          <label className="lbl">Competición</label>
+          <select value={lg} onChange={(e) => { setLg(Number(e.target.value)); setList(null); setPick(new Set()) }}>
+            {LEAGUES.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        </>
+      )}
       <h3>Cargar un partido a mano (ej: Argentina)</h3>
       <form onSubmit={addManual}>
         <label className="lbl">Equipo local</label>

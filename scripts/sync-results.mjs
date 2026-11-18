@@ -5,9 +5,6 @@ if (!enabled) {
   console.log('Sin SUPABASE_ACCESS_TOKEN: nada para hacer.')
   process.exit(0)
 }
-// Completa logo/torneo en prodes que todavía no lo tienen (asume Liga Profesional si ya tenían partidos importados)
-await sql(`update groups g set league_id = 4406 where g.league_id is null
-  and exists (select 1 from matches m where m.group_id = g.id and m.external_id is not null)`)
 const noLogo = await sql(`select distinct league_id from groups where league_id is not null and (logo is null or season is null)`)
 for (const { league_id } of noLogo) {
   const id = Number(league_id)
@@ -23,17 +20,17 @@ for (const { league_id } of noLogo) {
 const rows = await sql(`
   select m.external_id, m.round, g.league_id, g.season
   from matches m join groups g on g.id = m.group_id
-  where m.external_id is not null and g.league_id is not null
+  where m.external_id is not null
     and m.home_score is null and m.kickoff < now()`)
 
 const rounds = new Map()
-for (const r of rows) {
+for (const r of rows.filter((x) => x.league_id != null && Number(x.league_id) !== 4562)) {
   const n = Number(String(r.round ?? '').replace(/\D/g, '')) || 0
   rounds.set(`${r.league_id}|${r.season}|${n}`, { league: Number(r.league_id), season: String(r.season), round: n })
 }
 let updated = 0
-// Amistosos: no tienen fechas numeradas, se consulta cada partido
-for (const r of rows.filter((x) => Number(x.league_id) === 4562)) {
+// Amistosos y campeonatos mezclados: no tienen fechas numeradas, se consulta cada partido
+for (const r of rows.filter((x) => x.league_id == null || Number(x.league_id) === 4562)) {
   const id = String(r.external_id).replace(/\D/g, '')
   const res = await fetch(`https://www.thesportsdb.com/api/v1/json/123/lookupevent.php?id=${id}`)
   const e = res.ok ? ((await res.json()).events ?? [])[0] : null
