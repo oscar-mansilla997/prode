@@ -322,6 +322,8 @@ export function EventPicker({ group, matches, reload, noManual }: { group: Group
 /** Buscar un partido por el nombre de un equipo (ej: River) y agregarlo */
 export function MatchSearch({ group, matches, reload }: { group: Group; matches: Match[]; reload: () => void }) {
   const [q, setQ] = useState('')
+  const [teams, setTeams] = useState<Ev[] | null>(null)
+  const [team, setTeam] = useState<Ev | null>(null)
   const [list, setList] = useState<Ev[] | null>(null)
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
@@ -330,15 +332,21 @@ export function MatchSearch({ group, matches, reload }: { group: Group; matches:
   async function search(ev?: React.FormEvent) {
     ev?.preventDefault()
     if (q.trim().length < 3) return setMsg('Escribí al menos 3 letras del equipo.')
-    setBusy(true); setMsg(''); setList(null)
+    setBusy(true); setMsg(''); setTeams(null); setTeam(null); setList(null)
     try {
-      const teams = (await getTeams(q.trim())).filter((t) => t.strSport === 'Soccer').slice(0, 3)
-      const res = await Promise.all(teams.map((t) => getEvents(`eventsnext.php?id=${t.idTeam}`).catch(() => [] as Ev[])))
-      const seen = new Set<string>()
-      const out = res.flat().filter((e) => e.idEvent && e.strHomeTeam && e.strAwayTeam && !seen.has(String(e.idEvent)) && seen.add(String(e.idEvent)))
+      const t = (await getTeams(q.trim())).filter((x) => x.strSport === 'Soccer')
+      setTeams(t)
+      if (!t.length) setMsg('No encontré equipos con ese nombre. Probá con otra parte del nombre o armalo vos en "Armarlo yo".')
+    } catch (e) { setMsg('No se pudo buscar: ' + (e as Error).message) }
+    setBusy(false)
+  }
+  async function pickTeam(t: Ev) {
+    setTeam(t); setList(null); setMsg(''); setBusy(true)
+    try {
+      const out = (await getEvents(`eventsnext.php?id=${t.idTeam}`)).filter((e) => e.idEvent && e.strHomeTeam && e.strAwayTeam)
       out.sort((a, b) => String(a.strTimestamp ?? a.dateEvent).localeCompare(String(b.strTimestamp ?? b.dateEvent)))
       setList(out)
-      if (!out.length) setMsg('No encontré partidos próximos de ese equipo. Probá con otro nombre o armalo vos en "Armarlo yo".')
+      if (!out.length) setMsg('Ese equipo no tiene partidos próximos cargados en la fuente. Si sabés cuándo juega, armalo vos en "Armarlo yo".')
     } catch (e) { setMsg('No se pudo buscar: ' + (e as Error).message) }
     setBusy(false)
   }
@@ -358,10 +366,27 @@ export function MatchSearch({ group, matches, reload }: { group: Group; matches:
     <div className="card">
       <h3>Buscar un partido</h3>
       <form onSubmit={search}>
-        <label className="lbl">Equipo (ej: River)</label>
+        <label className="lbl">Equipo (ej: Gimnasia, Independiente)</label>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Escribí el nombre del equipo" />
-        <button className="primary" disabled={busy}>{busy ? 'Buscando…' : 'Buscar partidos'}</button>
+        <button className="primary" disabled={busy}>{busy && !team ? 'Buscando…' : 'Buscar equipo'}</button>
       </form>
+      {teams && !team && teams.length > 0 && (
+        <>
+          <p className="small muted">Elegí el equipo:</p>
+          {teams.map((t) => (
+            <button key={String(t.idTeam)} className="card match amis" onClick={() => pickTeam(t)}>
+              <span className="team"><Crest url={(t.strBadge ?? t.strTeamBadge ?? null) as string | null} />
+                <span><strong>{t.strTeam}</strong><div className="small muted" style={{ margin: 0 }}>{[t.strLeague, t.strCountry].filter(Boolean).join(' · ')}</div></span></span>
+            </button>
+          ))}
+        </>
+      )}
+      {team && (
+        <>
+          <button className="link" onClick={() => { setTeam(null); setList(null); setMsg('') }}>‹ Volver a los equipos</button>
+          <p className="small muted">Próximos partidos de <strong>{team.strTeam}</strong>:</p>
+        </>
+      )}
       {(list ?? []).filter((e) => !have.has(String(e.idEvent))).map((e) => {
         const ko = new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').toISOString()
         return (
