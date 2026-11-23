@@ -243,7 +243,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
       group_id: target.id, round: f.round || null, home: h.name, away: a.name, home_logo: h.logo, away_logo: a.logo,
       kickoff: new Date(f.kickoff).toISOString(),
     })
-    setErr(error?.message ?? '')
+    setErr(error ? (error.code === '23505' ? 'Ese partido ya está cargado en este prode (lo cargó otro administrador o vos antes).' : error.message) : '')
     if (!error) {
       await Promise.all([saveTeam(h.name, h.logo), saveTeam(a.name, a.logo)])
       setFiles({ home: null, away: null })
@@ -254,7 +254,10 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   }
   async function setResult(m: Match, hs: string, as: string) {
     const v = hs === '' || as === '' ? [null, null] : [+hs, +as]
-    await supabase.from('matches').update({ home_score: v[0], away_score: v[1], score_manual: v[0] !== null }).eq('id', m.id)
+    const { data, error } = await supabase.rpc('set_match_result', { mid: m.id, new_h: v[0], new_a: v[1], seen_h: m.home_score, seen_a: m.away_score })
+    if (error) { setErr(error.message); return }
+    if (data && data.deleted) await notice('Otro administrador eliminó este partido.')
+    else if (data && !data.ok) await notice(`Otro administrador ya cargó ${data.home ?? '-'} a ${data.away ?? '-'} en este partido. Se muestra ese resultado; si querés cambiarlo, guardalo de nuevo.`, 'Resultado ya cargado')
     reload()
   }
   async function remove(m: Match) {
@@ -335,7 +338,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
         </div>
       )}
       <h3>Partidos y resultados</h3>
-      {matches.map((m) => <ResultRow key={m.id} m={m} onSave={setResult} onDelete={remove} />)}
+      {matches.map((m) => <ResultRow key={`${m.id}-${m.home_score}-${m.away_score}`} m={m} onSave={setResult} onDelete={remove} />)}
     </>
   )
 }
