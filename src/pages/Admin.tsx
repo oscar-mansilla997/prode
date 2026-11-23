@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { DEMO, feeNum, money, supabase, type Entry, type Group, type Profile } from '../supabase'
+import { DEMO, money, supabase, type Entry, type Group, type Profile } from '../supabase'
 import { Avatar, PredList } from '../components'
 import { LEAGUES } from './AutoImport'
 import OwnLeagues from './OwnLeagues'
@@ -22,13 +22,8 @@ export default function Admin() {
   const [f, setF] = useState({ name: '', fee: '', pay_alias: '', pct: '' })
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const nav = useNavigate()
-  const [pct, setPct] = useState('')
-  const [fee, setFee] = useState('')
-  const [alias, setAlias] = useState('')
-  const [showDef, setShowDef] = useState(false)
   const [others, setOthers] = useState<Group[]>([])
   const [orgNames, setOrgNames] = useState<Record<string, string>>({})
-  const [pctMsg, setPctMsg] = useState('')
 
   const load = useCallback(async () => {
     const uid = (await supabase.auth.getUser()).data.user?.id
@@ -43,9 +38,6 @@ export default function Admin() {
       const pr = await supabase.from('profiles').select('id, name').in('id', [...new Set(ot.map((x) => x.owner_id))])
       setOrgNames(Object.fromEntries(((pr.data as { id: string; name: string }[]) ?? []).map((x) => [x.id, x.name])))
     }
-    setPct((cur) => (cur === '' && gl[0] ? String(gl[0].commission_pct ?? 0) : cur))
-    setFee((cur) => (cur === '' && gl[0] ? String(feeNum(gl[0].fee)) : cur))
-    setAlias((cur) => (cur === '' && gl[0]?.pay_alias ? gl[0].pay_alias : cur))
     if (all.length) {
       const r = await supabase.from('entries').select('*, profile:profiles(*), group:groups(id, name, fee, logo, owner_id)')
         .in('group_id', all.map((x) => x.id)).eq('status', 'pending').order('submitted_at')
@@ -56,25 +48,6 @@ export default function Admin() {
 
   async function decide(r: Req, status: 'approved' | 'rejected') {
     await supabase.from('entries').update({ status }).eq('id', r.id)
-    load()
-  }
-  async function savePct() {
-    const v = Math.min(100, Math.max(0, Number(pct) || 0))
-    setPct(String(v))
-    let blocked = 0
-    const f = String(Math.max(0, Math.round(Number(fee.replace(/\D/g, '')) || 0)))
-    setFee(f)
-    for (const g of groups) {
-      if (g.finish_notified) continue
-      const patch: Record<string, unknown> = {}
-      if (Number(g.commission_pct) !== v) patch.commission_pct = v
-      if (feeNum(g.fee) !== Number(f)) patch.fee = f === '0' ? null : f
-      if ((g.pay_alias ?? '') !== alias.trim()) patch.pay_alias = alias.trim() || null
-      if (!Object.keys(patch).length) continue
-      const { error } = await supabase.from('groups').update(patch).eq('id', g.id)
-      if (error) blocked++
-    }
-    setPctMsg(blocked ? `${blocked} campeonato(s) tienen una fecha en juego y no se pueden cambiar ahora.` : 'Guardado ✓')
     load()
   }
   async function setActive(g: Group, active: boolean) {
@@ -105,7 +78,7 @@ export default function Admin() {
     let logo: string | null = null
     try { if (logoFile) logo = await uploadCrest(logoFile) } catch (x) { setBusy(false); return setErr((x as Error).message) }
     const { data, error } = await supabase.from('groups')
-      .insert({ name: f.name, logo, fee: f.fee || (fee && fee !== '0' ? fee : null), pay_alias: f.pay_alias || alias.trim() || null, commission_pct: Math.min(100, Math.max(0, Number(f.pct || pct) || 0)) })
+      .insert({ name: f.name, logo, fee: f.fee.trim() || null, pay_alias: f.pay_alias.trim() || null, commission_pct: Math.min(100, Math.max(0, Number(f.pct) || 0)) })
       .select().single()
     setBusy(false)
     if (error) return setErr(error.message)
@@ -170,25 +143,6 @@ export default function Admin() {
 
       {tab === 'campeonatos' && (
         <>
-          <button className="ghost" onClick={() => setShowDef(!showDef)}>{showDef ? 'Ocultar valores generales ▴' : 'Valores generales: alias, valor y porcentaje ▾'}</button>
-          {showDef && <div className="card pot">
-            <div className="eyebrow">Valor y ganancia</div>
-            <label className="lbl">Tu alias para que te transfieran</label>
-            <input placeholder="Ej: mi.alias.mp" value={alias} onChange={(e) => setAlias(e.target.value)} />
-            <p className="small muted" style={{ margin: '2px 0 6px' }}>Es el que ven los jugadores después de enviar su jugada, con un botón para copiarlo. Se aplica a todos tus campeonatos. En cada uno se puede cambiar por separado en Administrar → Ajustes.</p>
-            <div className="row" style={{ marginTop: 8 }}>
-              <span>Valor de la jugada ($)</span>
-              <span><input className="pct" style={{ width: 90 }} type="number" min={0} inputMode="numeric" value={fee} onChange={(e) => setFee(e.target.value)} /></span>
-            </div>
-            <p className="small muted" style={{ margin: '2px 0 6px' }}>Con valor 0 los campeonatos son amistosos: sin pago, sin pozo y sin premio. Cuando le pongas un valor, pasan a ser con premio.</p>
-            <div className="row" style={{ marginTop: 8 }}>
-              <span>Porcentaje que te queda de cada pozo</span>
-              <span><input className="pct" type="number" min={0} max={100} inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} /> %</span>
-            </div>
-            <p className="small muted">Vale para cada fecha: se descuenta del total recaudado y el resto es el premio. Se aplica a las fechas que todavía no empezaron, y las siguientes se abren con el mismo valor y porcentaje. No cambia las fechas en juego ni las ya terminadas. Ej: 4 jugadores × $5.000 con 10% → pozo $18.000 y te quedan $2.000.</p>
-            <button className="primary small" onClick={savePct}>Guardar</button>
-            {pctMsg && <span className="small muted"> {pctMsg}</span>}
-          </div>}
           {err && <p className="msg">{err}</p>}
           {!creating ? <button className="primary" onClick={() => setCreating(true)}>+ Crear un prode</button> : (
             <form className="card" onSubmit={createCustom}>
@@ -198,7 +152,7 @@ export default function Admin() {
               <label className="lbl">Logo del campeonato (opcional)</label>
               <input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
               <p className="small muted">{IMG_HINT}</p>
-              <label className="lbl">Valor de la jugada</label>
+              <label className="lbl">Valor de la jugada (vacío o 0 = amistoso, sin premio)</label>
               <input placeholder="Ej: $5000" value={f.fee} onChange={(e) => setF({ ...f, fee: e.target.value })} />
               <label className="lbl">Tu porcentaje del pozo (%)</label>
               <input type="number" min={0} max={100} inputMode="decimal" placeholder="Ej: 10" value={f.pct} onChange={(e) => setF({ ...f, pct: e.target.value })} />
