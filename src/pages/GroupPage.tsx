@@ -4,7 +4,7 @@ import { feeNum, isFinished, money, points, sortMatches, supabase, statusLabel, 
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import { ask, copyText, notice, toast } from '../dialogs'
 import ShareButton from '../Share'
-import { uploadCrest } from '../upload'
+import { IMG_HINT, uploadCrest } from '../upload'
 import AutoImport, { EventPicker, FRIENDLIES, crestFor, importNext, refreshResults } from './AutoImport'
 
 type Tab = 'participantes' | 'partidos' | 'ranking' | 'ajustes'
@@ -366,6 +366,9 @@ function SettingsCard({ group, locked, reload }: { group: Group; locked: boolean
           const f = e.target.files?.[0]; if (!f) return
           try { const logo = await uploadCrest(f); await supabase.from('groups').update({ logo }).eq('id', group.id); setMsg('Logo cambiado ✓'); reload() } catch (x) { setMsg((x as Error).message) }
         }} />
+      </div>
+      <div>
+        <p className="small muted">{IMG_HINT}</p>
       </div>
       <label className="small muted">Nombre</label>
       <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />

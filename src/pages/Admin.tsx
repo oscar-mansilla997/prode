@@ -4,7 +4,7 @@ import { DEMO, feeNum, money, supabase, type Entry, type Group, type Profile } f
 import { Avatar, PredList } from '../components'
 import { LEAGUES, importNext } from './AutoImport'
 import { ask, toast } from '../dialogs'
-import { uploadCrest } from '../upload'
+import { IMG_HINT, uploadCrest } from '../upload'
 
 type Req = Entry & { profile: Profile; group: { id: string; name: string; fee: string | null; logo: string | null } }
 
@@ -23,6 +23,7 @@ export default function Admin() {
   const nav = useNavigate()
   const [pct, setPct] = useState('')
   const [fee, setFee] = useState('')
+  const [alias, setAlias] = useState('')
   const [pctMsg, setPctMsg] = useState('')
 
   const load = useCallback(async () => {
@@ -32,6 +33,7 @@ export default function Admin() {
     setGroups(gl)
     setPct((cur) => (cur === '' && gl[0] ? String(gl[0].commission_pct ?? 0) : cur))
     setFee((cur) => (cur === '' && gl[0] ? String(feeNum(gl[0].fee)) : cur))
+    setAlias((cur) => (cur === '' && gl[0]?.pay_alias ? gl[0].pay_alias : cur))
     if (gl.length) {
       const r = await supabase.from('entries').select('*, profile:profiles(*), group:groups(id, name, fee, logo)')
         .in('group_id', gl.map((x) => x.id)).eq('status', 'pending').order('submitted_at')
@@ -55,6 +57,7 @@ export default function Admin() {
       const patch: Record<string, unknown> = {}
       if (Number(g.commission_pct) !== v) patch.commission_pct = v
       if (feeNum(g.fee) !== Number(f)) patch.fee = f === '0' ? null : f
+      if ((g.pay_alias ?? '') !== alias.trim()) patch.pay_alias = alias.trim() || null
       if (!Object.keys(patch).length) continue
       const { error } = await supabase.from('groups').update(patch).eq('id', g.id)
       if (error) blocked++
@@ -166,6 +169,9 @@ export default function Admin() {
         <>
           <div className="card pot">
             <div className="eyebrow">Valor y ganancia</div>
+            <label className="lbl">Tu alias para que te transfieran</label>
+            <input placeholder="Ej: mi.alias.mp" value={alias} onChange={(e) => setAlias(e.target.value)} />
+            <p className="small muted" style={{ margin: '2px 0 6px' }}>Es el que ven los jugadores después de enviar su jugada, con un botón para copiarlo. Se aplica a todos tus campeonatos. En cada uno se puede cambiar por separado en Administrar → Ajustes.</p>
             <div className="row" style={{ marginTop: 8 }}>
               <span>Valor de la jugada ($)</span>
               <span><input className="pct" style={{ width: 90 }} type="number" min={0} inputMode="numeric" value={fee} onChange={(e) => setFee(e.target.value)} /></span>
@@ -204,6 +210,7 @@ export default function Admin() {
               <input placeholder="Ej: Copa de los Amigos" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
               <label className="lbl">Logo del campeonato (opcional)</label>
               <input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
+              <p className="small muted">{IMG_HINT}</p>
               <label className="lbl">Valor de la jugada</label>
               <input placeholder="Ej: $5000" value={f.fee} onChange={(e) => setF({ ...f, fee: e.target.value })} />
               <label className="lbl">Tu porcentaje del pozo (%)</label>
@@ -377,6 +384,7 @@ function Equipos() {
         <input placeholder="Ej: Los Pumas" value={name} onChange={(e) => setName(e.target.value)} required />
         <label className="lbl">Escudo (imagen)</label>
         <input id="crest-file" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <p className="small muted">{IMG_HINT}</p>
         <button className="primary" disabled={busy}>{busy ? 'Subiendo…' : 'Agregar equipo'}</button>
         {err && <p className="msg">{err}</p>}
       </form>
