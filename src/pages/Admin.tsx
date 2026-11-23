@@ -10,7 +10,7 @@ import { IMG_HINT, uploadCrest } from '../upload'
 type Req = Entry & { profile: Profile; group: { id: string; name: string; fee: string | null; logo: string | null } }
 
 export default function Admin() {
-  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'equipos' | 'usuarios' | 'organizadores' | 'ligas'>('resumen')
+  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'equipos' | 'usuarios' | 'organizadores' | 'ligas' | 'papelera'>('resumen')
   const [isOwner, setIsOwner] = useState(false)
   useEffect(() => { supabase.rpc('is_owner').then(({ data }) => setIsOwner(data === true)) }, [])
   const [groups, setGroups] = useState<Group[]>([])
@@ -57,7 +57,7 @@ export default function Admin() {
     nav(`/g/${(data as Group).id}`)
   }
   async function removeGroup(g: Group) {
-    if (!(await ask('Se borran sus partidos, jugadas y ranking. No se puede deshacer.', { title: `¿Eliminar "${g.name}"?`, ok: 'Eliminar', danger: true }))) return
+    if (!(await ask('Se va a la Papelera con sus partidos y jugadas, y podés restaurarlo desde ahí.', { title: `¿Eliminar "${g.name}"?`, ok: 'Eliminar', danger: true }))) return
     setBusy(true); setErr('')
     const { error } = await supabase.from('groups').delete().eq('id', g.id)
     if (error) setErr(error.message)
@@ -101,6 +101,7 @@ export default function Admin() {
         <button className={tab === 'campeonatos' ? 'on' : ''} onClick={() => setTab('campeonatos')}>Campeonatos</button>
         <button className={tab === 'ligas' ? 'on' : ''} onClick={() => setTab('ligas')}>Mis ligas</button>
         <button className={tab === 'equipos' ? 'on' : ''} onClick={() => setTab('equipos')}>Equipos</button>
+        <button className={tab === 'papelera' ? 'on' : ''} onClick={() => setTab('papelera')}>Papelera</button>
         <button className={tab === 'usuarios' ? 'on' : ''} onClick={() => setTab('usuarios')}>Usuarios</button>
         {isOwner && <button className={tab === 'organizadores' ? 'on' : ''} onClick={() => setTab('organizadores')}>Organizadores</button>}
       </div>
@@ -109,6 +110,7 @@ export default function Admin() {
       {tab === 'usuarios' && <Usuarios />}
       {tab === 'organizadores' && isOwner && <Organizadores />}
       {tab === 'equipos' && <Equipos />}
+      {tab === 'papelera' && <Papelera onRestored={load} />}
       {tab === 'ligas' && <OwnLeagues />}
       {tab === 'solicitudes' && (reqs.length === 0 ? <p className="empty">No hay solicitudes pendientes.<br />Cuando alguien envíe su jugada, aparece acá para que confirmes el pago.</p> : reqs.map((r) => {
         const digits = r.profile.phone.replace(/\D/g, '')
@@ -332,6 +334,36 @@ function Equipos() {
         <div key={t.id} className="card row">
           <span className="who">{t.logo ? <img className="crest" style={{ width: 34, height: 34 }} src={t.logo} alt="" /> : <span className="pos">?</span>}<strong>{t.name}</strong></span>
           <button className="danger" onClick={() => remove(t)}>Borrar</button>
+        </div>
+      ))}
+    </>
+  )
+}
+
+function Papelera({ onRestored }: { onRestored: () => void }) {
+  const [rows, setRows] = useState<{ id: string; name: string; deleted_at: string }[] | null>(null)
+  const [err, setErr] = useState('')
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('deleted_prodes').select('id, name, deleted_at').order('deleted_at', { ascending: false })
+    setRows((data as { id: string; name: string; deleted_at: string }[]) ?? [])
+  }, [])
+  useEffect(() => { load() }, [load])
+  async function restore(id: string) {
+    setErr('')
+    const { error } = await supabase.rpc('restore_prode', { did: id })
+    if (error) return setErr(error.message)
+    toast('Prode restaurado')
+    await load(); onRestored()
+  }
+  return (
+    <>
+      <p className="small muted">Los prodes eliminados quedan guardados acá con todos sus partidos y jugadas.</p>
+      {err && <p className="msg">{err}</p>}
+      {rows === null ? <p className="muted">Cargando…</p> : rows.length === 0 ? <p className="empty">La papelera está vacía.</p> : rows.map((r) => (
+        <div className="card" key={r.id}>
+          <strong>{r.name}</strong>
+          <div className="small muted">Eliminado el {new Date(r.deleted_at).toLocaleString('es-AR')}</div>
+          <button className="primary small" onClick={() => restore(r.id)}>Restaurar</button>
         </div>
       ))}
     </>

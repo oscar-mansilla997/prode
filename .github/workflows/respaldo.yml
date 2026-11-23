@@ -1,0 +1,32 @@
+name: Respaldo
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/backup.mjs
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Cifrar (los datos son privados)
+        run: |
+          [ -f respaldo.json ] || exit 0
+          KEY=$(printf 'respaldo-cabra' | openssl dgst -sha256 -hmac "$SUPABASE_ACCESS_TOKEN" -r | cut -d' ' -f1)
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass pass:"$KEY" -in respaldo.json -out respaldo.enc
+          rm respaldo.json
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: respaldo
+          path: respaldo.enc
+          retention-days: 30
+          if-no-files-found: ignore
