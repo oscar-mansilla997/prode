@@ -284,8 +284,10 @@ export function EventPicker({ group, matches, reload, noManual }: { group: Group
         )}
         <button className="primary" disabled={busy}>Agregar partido</button>
       </form>
-      <h3>O elegilo de la lista</h3>
-      <button className="primary" disabled={busy} onClick={load}>{busy ? 'Buscando…' : list ? 'Actualizar lista' : 'Traer amistosos'}</button>
+        </>
+      )}
+      {!noManual && <h3>O elegilo de la lista</h3>}
+      <button className="primary" disabled={busy} onClick={load}>{busy ? 'Buscando…' : list ? 'Actualizar lista' : mixed ? 'Traer partidos' : 'Traer amistosos'}</button>
       {list && list.length > 0 && (
         <>
           <button className="ghost" onClick={() => setAll(!all)}>{all ? 'Ocultar sub-20, sub-23 y femenino' : 'Mostrar también sub-20, sub-23 y femenino'}</button>
@@ -310,9 +312,7 @@ export function EventPicker({ group, matches, reload, noManual }: { group: Group
           {pick.size > 0 && <div className="stickybar"><button className="primary" disabled={busy} onClick={add}>Agregar {pick.size} partido(s)</button></div>}
         </>
       )}
-      <p className="small muted">El escudo se busca solo por el nombre, escribilo en inglés si no aparece (ej: United States). El resultado de estos partidos lo cargás vos en la lista de abajo.</p>
-        </>
-      )}
+      {!noManual && <p className="small muted">El escudo se busca solo por el nombre, escribilo en inglés si no aparece (ej: United States). El resultado de los partidos cargados a mano lo cargás vos en la lista de abajo.</p>}
       <button className="ghost" disabled={busy} onClick={results}>Actualizar resultados</button>
       {msg && <p className="small">{msg}</p>}
     </div>
