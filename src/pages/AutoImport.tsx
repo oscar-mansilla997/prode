@@ -167,7 +167,7 @@ export async function crestFor(name: string): Promise<string | null> {
 const SKIP = /\b(U-?\d{2}|women|femenin|\(w\)| W$)/i
 
 /** Amistosos: se eligen de la lista de los próximos días (no tienen fechas numeradas) */
-export function EventPicker({ group, matches, reload }: { group: Group; matches: Match[]; reload: () => void }) {
+export function EventPicker({ group, matches, reload, noManual }: { group: Group; matches: Match[]; reload: () => void; noManual?: boolean }) {
   const [list, setList] = useState<Ev[] | null>(null)
   const [pick, setPick] = useState<Set<string>>(new Set())
   const [all, setAll] = useState(false)
@@ -246,7 +246,7 @@ export function EventPicker({ group, matches, reload }: { group: Group; matches:
   }
   return (
     <div className="card">
-      <h3>{mixed ? 'Traer partidos de una competición' : 'Amistosos internacionales'}</h3>
+      <h3>{mixed ? 'Partidos de una competición' : 'Amistosos internacionales'}</h3>
       <p className="small muted">Traé la lista de los próximos 10 días y tocá los partidos que quieras en este campeonato.</p>
       {mixed && (
         <>
@@ -256,6 +256,8 @@ export function EventPicker({ group, matches, reload }: { group: Group; matches:
           </select>
         </>
       )}
+      {!noManual && (
+        <>
       <h3>Cargar un partido a mano (ej: Argentina)</h3>
       <form onSubmit={addManual}>
         <label className="lbl">Equipo local</label>
@@ -303,6 +305,8 @@ export function EventPicker({ group, matches, reload }: { group: Group; matches:
         </>
       )}
       <p className="small muted">El escudo se busca solo por el nombre, escribilo en inglés si no aparece (ej: United States). El resultado de estos partidos lo cargás vos en la lista de abajo.</p>
+        </>
+      )}
       <button className="ghost" disabled={busy} onClick={results}>Actualizar resultados</button>
       {msg && <p className="small">{msg}</p>}
     </div>

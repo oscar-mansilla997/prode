@@ -165,6 +165,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   const done = group.finish_notified
   const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
   const [err, setErr] = useState('')
+  const [src, setSrc] = useState<'own' | 'comp'>('own')
   const [files, setFiles] = useState<{ home: File | null; away: File | null }>({ home: null, away: null })
   const [fc, setFc] = useState<{ home: string | null; away: string | null }>({ home: null, away: null })
   const [teams, setTeams] = useState<{ id: string; name: string; logo: string | null }[]>([])
@@ -258,14 +259,22 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   return (
     <>
       <ReviewBanner group={group} matches={matches} reload={reload} />
-      {(!group.league_id || Number(group.league_id) === FRIENDLIES) && <EventPicker group={group} matches={matches} reload={reload} />}
+      {!group.league_id && (
+        <div className="seg">
+          <button className={src === 'own' ? 'on' : ''} onClick={() => setSrc('own')}>Mi base propia</button>
+          <button className={src === 'comp' ? 'on' : ''} onClick={() => setSrc('comp')}>De una competición</button>
+        </div>
+      )}
+      {Number(group.league_id) === FRIENDLIES && <EventPicker group={group} matches={matches} reload={reload} />}
+      {!group.league_id && src === 'comp' && <EventPicker group={group} matches={matches} reload={reload} noManual />}
       {group.league_id && Number(group.league_id) !== FRIENDLIES && <AutoImport group={group} matches={matches} reload={reload} />}
+      {(group.league_id || src === 'own') && Number(group.league_id) !== FRIENDLIES && (
       <form className="card" onSubmit={add}>
-        <h3>Agregar partido</h3>
+        <h3>{group.league_id ? 'Agregar partido' : 'Agregar un partido de tu base propia'}</h3>
         {done && <p className="small" style={{ color: 'var(--gold)' }}>Esta fecha ya tuvo ganador. El partido que cargues va a la fecha siguiente, con su propio pozo y ganador.</p>}
         <>
-          <label className="lbl">Fecha o ronda</label>
-          <input placeholder="Ej: Fecha 1" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
+          <label className="lbl">Nombre del torneo o ronda (opcional)</label>
+          <input placeholder="Ej: Liga del pueblo, Fecha 3" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
           <datalist id="equipos">{teams.map((t) => <option key={t.id} value={t.name} />)}</datalist>
           <label className="lbl">Equipo local</label>
           <input list="equipos" placeholder="Escribí el nombre" value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required />
@@ -292,6 +301,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
         </>
         {err && <p className="msg">{err}</p>}
       </form>
+      )}
       {done && matches.some((m) => m.home_score === null) && (
         <div className="card">
           <p className="small">Hay partidos sin jugar en una fecha que ya tuvo ganador. Se pueden pasar a la fecha siguiente.</p>
