@@ -165,3 +165,9 @@ label.small.muted, .lbl { display:block; color:#b4bfd0; font-size:.8rem; font-we
 .cta { display:block; text-align:center; margin-top:14px; padding:13px; border-radius:12px; background:var(--card2); border:1px solid var(--acc); color:var(--acc); font-weight:700; text-decoration:none; }
 .sub { display:flex; justify-content:flex-end; gap:10px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
 .sub button { margin-top:0; width:auto; }
+.teamlist { background:var(--card); border:1px solid var(--line); border-radius:10px; margin-top:4px; max-height:260px; overflow:auto; scrollbar-width:none; }
+.teamlist::-webkit-scrollbar { display:none; }
+.teamopt { display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:transparent; border:0; border-bottom:1px solid var(--line); color:var(--txt); padding:10px 12px; font-size:.95rem; }
+.teamopt:last-child { border-bottom:0; }
+.teamopt.new { color:#63e0b6; font-weight:600; }
+.teamopt .crest, .teamopt img { width:26px; height:26px; flex:none; }

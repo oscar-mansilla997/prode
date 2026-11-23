@@ -4,6 +4,7 @@ import { feeNum, isFinished, money, points, sortMatches, supabase, statusLabel, 
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import { ask, copyText, notice, toast } from '../dialogs'
 import ShareButton from '../Share'
+import TeamField from '../TeamField'
 import { IMG_HINT, saveTeam, uploadCrest } from '../upload'
 import AutoImport, { EventPicker, FRIENDLIES, MatchSearch, crestFor, importNext, refreshResults } from './AutoImport'
 
@@ -217,17 +218,19 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
     toast('Partidos pasados a la fecha siguiente')
     nav(`/g/${t.id}`)
   }
+  const [picked, setPicked] = useState<{ home: { name: string; logo: string | null } | null; away: { name: string; logo: string | null } | null }>({ home: null, away: null })
+  const pool = (olSel ? ol.find((l) => l.id === olSel)?.teams ?? [] : teams).map((t) => ({ name: t.name, logo: t.logo }))
   const known = (n: string) => teams.find((t) => t.name.toLowerCase() === n.trim().toLowerCase())
   useEffect(() => {
     const t = setTimeout(async () => {
       const [h, a] = await Promise.all([
-        known(f.home)?.logo ?? crestFor(f.home),
-        known(f.away)?.logo ?? crestFor(f.away),
+        picked.home?.logo ?? known(f.home)?.logo ?? (picked.home ? null : crestFor(f.home)),
+        picked.away?.logo ?? known(f.away)?.logo ?? (picked.away ? null : crestFor(f.away)),
       ])
       setFc({ home: h ?? null, away: a ?? null })
     }, 500)
     return () => clearTimeout(t)
-  }, [f.home, f.away, teams])
+  }, [f.home, f.away, teams, picked])
   async function add(e: React.FormEvent) {
     e.preventDefault()
     const h = { name: f.home.trim(), logo: fc.home }, a = { name: f.away.trim(), logo: fc.away }
@@ -248,7 +251,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
       await Promise.all([saveTeam(h.name, h.logo), saveTeam(a.name, a.logo)])
       setFiles({ home: null, away: null })
       setTeams((l) => [...l, ...[h, a].filter((x) => !l.some((t) => t.name.toLowerCase() === x.name.toLowerCase())).map((x) => ({ id: x.name, name: x.name, logo: x.logo }))])
-      setF({ ...f, home: '', away: '' })
+      setF({ ...f, home: '', away: '' }); setPicked({ home: null, away: null })
       if (done) { toast('Partido cargado en la fecha siguiente'); nav(`/g/${target.id}`) } else reload()
     }
   }
@@ -295,17 +298,18 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
           )}
           <label className="lbl">Nombre del torneo o ronda (opcional)</label>
           <input placeholder="Ej: Liga del pueblo, Fecha 3" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
-          <datalist id="equipos">{(olSel ? ol.find((l) => l.id === olSel)?.teams ?? [] : teams).map((t) => <option key={t.id} value={t.name} />)}</datalist>
-          <label className="lbl">Equipo local</label>
-          <input list="equipos" placeholder="Escribí el nombre" value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required />
+          <TeamField label="Equipo local" value={f.home} saved={pool} web={!olSel}
+            onText={(v) => { setF({ ...f, home: v }); setPicked((p) => ({ ...p, home: null })) }}
+            onPick={(t) => { setF({ ...f, home: t.name }); setPicked((p) => ({ ...p, home: t })) }} />
           {f.home.trim() && !fc.home && !known(f.home)?.logo && (
             <>
               <label className="lbl">Escudo del local (no lo encontré, subilo)</label>
               <input type="file" accept="image/*" onChange={(e) => setFiles({ ...files, home: e.target.files?.[0] ?? null })} />
             </>
           )}
-          <label className="lbl">Equipo visitante</label>
-          <input list="equipos" placeholder="Escribí el nombre" value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required />
+          <TeamField label="Equipo visitante" value={f.away} saved={pool} web={!olSel}
+            onText={(v) => { setF({ ...f, away: v }); setPicked((p) => ({ ...p, away: null })) }}
+            onPick={(t) => { setF({ ...f, away: t.name }); setPicked((p) => ({ ...p, away: t })) }} />
           {f.away.trim() && !fc.away && !known(f.away)?.logo && (
             <>
               <label className="lbl">Escudo del visitante (no lo encontré, subilo)</label>

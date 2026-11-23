@@ -405,3 +405,12 @@ export function MatchSearch({ group, matches, reload }: { group: Group; matches:
     </div>
   )
 }
+
+export type TeamOpt = { name: string; logo: string | null; extra?: string }
+/** Equipos de fútbol de la fuente pública, con su escudo, para elegir de una lista */
+export async function searchTeamsWeb(q: string): Promise<TeamOpt[]> {
+  try {
+    const t = (await getTeams(q.trim())).filter((x) => x.strSport === 'Soccer')
+    return t.map((x) => ({ name: String(x.strTeam), logo: (x.strBadge ?? x.strTeamBadge ?? null) as string | null, extra: [x.strCountry, x.strLeague].filter(Boolean).join(' · ') }))
+  } catch { return [] }
+}
