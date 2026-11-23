@@ -24,19 +24,29 @@ export default function Admin() {
   const [pct, setPct] = useState('')
   const [fee, setFee] = useState('')
   const [alias, setAlias] = useState('')
+  const [others, setOthers] = useState<Group[]>([])
+  const [orgNames, setOrgNames] = useState<Record<string, string>>({})
   const [pctMsg, setPctMsg] = useState('')
 
   const load = useCallback(async () => {
     const uid = (await supabase.auth.getUser()).data.user?.id
-    const g = await supabase.from('groups').select('*').eq('owner_id', uid!).order('created_at', { ascending: false })
-    const gl = (g.data as Group[]) ?? []
-    setGroups(gl)
+    const isOw = (await supabase.rpc('is_owner')).data === true
+    const q = supabase.from('groups').select('*').order('created_at', { ascending: false })
+    const g = await (isOw ? q : q.eq('owner_id', uid!))
+    const all = (g.data as Group[]) ?? []
+    const gl = all.filter((x) => x.owner_id === uid)
+    const ot = all.filter((x) => x.owner_id !== uid)
+    setGroups(gl); setOthers(ot)
+    if (ot.length) {
+      const pr = await supabase.from('profiles').select('id, name').in('id', [...new Set(ot.map((x) => x.owner_id))])
+      setOrgNames(Object.fromEntries(((pr.data as { id: string; name: string }[]) ?? []).map((x) => [x.id, x.name])))
+    }
     setPct((cur) => (cur === '' && gl[0] ? String(gl[0].commission_pct ?? 0) : cur))
     setFee((cur) => (cur === '' && gl[0] ? String(feeNum(gl[0].fee)) : cur))
     setAlias((cur) => (cur === '' && gl[0]?.pay_alias ? gl[0].pay_alias : cur))
-    if (gl.length) {
-      const r = await supabase.from('entries').select('*, profile:profiles(*), group:groups(id, name, fee, logo)')
-        .in('group_id', gl.map((x) => x.id)).eq('status', 'pending').order('submitted_at')
+    if (all.length) {
+      const r = await supabase.from('entries').select('*, profile:profiles(*), group:groups(id, name, fee, logo, owner_id)')
+        .in('group_id', all.map((x) => x.id)).eq('status', 'pending').order('submitted_at')
       setReqs(((r.data as unknown as Req[]) ?? []).filter((x) => x.submitted_at))
     } else setReqs([])
   }, [])
@@ -85,7 +95,7 @@ export default function Admin() {
   async function createNext(g: Group) {
     setBusy(true); setErr('')
     const { data, error } = await supabase.from('groups').insert({
-      name: g.name, fee: g.fee, pay_alias: g.pay_alias, commission_pct: g.commission_pct, logo: g.logo,
+      owner_id: g.owner_id, name: g.name, fee: g.fee, pay_alias: g.pay_alias, commission_pct: g.commission_pct, logo: g.logo,
       league_id: g.league_id, season: g.season, round: (g.round ?? 0) + 1,
     }).select().single()
     setBusy(false)
@@ -115,12 +125,12 @@ export default function Admin() {
     <div key={g.id} className="card">
       <div className="row">
         <span className="who">{g.logo ? <img className="crest" style={{ width: 34, height: 34 }} src={g.logo} alt="" /> : <span className="pos">?</span>}
-          <span><strong>{g.name}{g.round ? ` · Fecha ${g.round}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{LEAGUES.find((l) => l.id === g.league_id)?.name ?? 'Campeonato propio'}</div></span></span>
+          <span><strong>{g.name}{g.round ? ` · Fecha ${g.round}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{LEAGUES.find((l) => l.id === g.league_id)?.name ?? 'Campeonato propio'}{orgNames[g.owner_id] && others.some((x) => x.id === g.id) ? ` · de ${orgNames[g.owner_id]}` : ''}</div></span></span>
         <button className={`toggle ${g.active ? 'on' : ''}`} disabled={busy} onClick={() => setActive(g, !g.active)}>{g.active ? 'Visible' : 'Oculto'}</button>
       </div>
       <Link to={`/g/${g.id}`} className="cta">Administrar</Link>
       <div className="sub">
-        {g.finish_notified && g.league_id && !groups.some((x) => x.league_id === g.league_id && x.season === g.season && (x.round ?? 0) > (g.round ?? 0)) && (
+        {g.finish_notified && g.league_id && ![...groups, ...others].some((x) => x.league_id === g.league_id && x.season === g.season && (x.round ?? 0) > (g.round ?? 0)) && (
           <button className="ghost small" disabled={busy} onClick={() => createNext(g)}>Crear fecha siguiente</button>
         )}
         <button className="danger small" disabled={busy} onClick={() => removeGroup(g)}>Eliminar</button>
@@ -150,7 +160,7 @@ export default function Admin() {
           <div key={r.id} className="card">
             <div className="row">
               <span className="who"><Avatar url={r.profile.avatar_url} name={r.profile.name} size={42} />
-                <span><strong>{r.profile.name}{(r.num ?? 1) > 1 ? ` · Jugada ${r.num}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{r.group.name}</div></span></span>
+                <span><strong>{r.profile.name}{(r.num ?? 1) > 1 ? ` · Jugada ${r.num}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{r.group.name}{orgNames[(r.group as { owner_id?: string }).owner_id ?? ''] ? ` · de ${orgNames[(r.group as { owner_id?: string }).owner_id ?? '']}` : ''}</div></span></span>
               {r.group.fee && <strong style={{ color: 'var(--gold)' }}>{r.group.fee}</strong>}
             </div>
             <div className="small">Alias del jugador: <strong>{r.profile.alias}</strong></div>
@@ -193,6 +203,13 @@ export default function Admin() {
             <>
               <h3>Fechas terminadas</h3>
               {groups.filter((g) => g.finish_notified).map(groupRow)}
+            </>
+          )}
+          {others.length > 0 && (
+            <>
+              <h3>Campeonatos de tus organizadores</h3>
+              <p className="small muted">Los ves y los podés administrar igual que los tuyos. El pozo y el alias de cada uno son los de su organizador.</p>
+              {others.map(groupRow)}
             </>
           )}
           <h3>Agregar una liga</h3>

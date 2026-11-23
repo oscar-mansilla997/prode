@@ -196,7 +196,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
       .sort((a, b) => (a.round ?? 0) - (b.round ?? 0))[0]
     if (nxt) return nxt
     const { data, error } = await supabase.from('groups').insert({
-      name: group.name, fee: group.fee, pay_alias: group.pay_alias, commission_pct: group.commission_pct, logo: group.logo,
+      owner_id: group.owner_id, name: group.name, fee: group.fee, pay_alias: group.pay_alias, commission_pct: group.commission_pct, logo: group.logo,
       league_id: group.league_id, season: group.season, round: (group.round ?? 0) + 1,
     }).select().single()
     if (error) { setErr(error.message); return null }
