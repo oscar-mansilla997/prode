@@ -162,18 +162,18 @@ export default function Admin() {
               <button type="button" className="link" onClick={() => setCreating(false)}>Cancelar</button>
             </form>
           )}
-          <h3>Fechas en juego</h3>
-          {groups.filter((g) => !g.finish_notified).length === 0 && <p className="empty">No tenés ningún prode en juego. Creá uno con el botón de arriba.</p>}
+          <h3>Tus prodes en juego</h3>
+          {groups.filter((g) => !g.finish_notified).length === 0 && <p className="empty">Todavía no tenés prodes propios en juego. Creá uno con el botón de arriba.</p>}
           {groups.filter((g) => !g.finish_notified).map(groupRow)}
           {groups.some((g) => g.finish_notified) && (
             <>
-              <h3>Fechas terminadas</h3>
+              <h3>Tus prodes terminados</h3>
               {groups.filter((g) => g.finish_notified).map(groupRow)}
             </>
           )}
           {others.length > 0 && (
             <>
-              <h3>Campeonatos de tus organizadores</h3>
+              <h3>Prodes de tus organizadores</h3>
               <p className="small muted">Los ves y los podés administrar igual que los tuyos. El pozo y el alias de cada uno son los de su organizador.</p>
               {others.map(groupRow)}
             </>
