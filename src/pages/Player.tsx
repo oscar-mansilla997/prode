@@ -48,6 +48,7 @@ export default function Player({ profile }: { profile: Profile }) {
   return (
     <>
       <div className="hero">
+        <ShareButton className="corner" text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra Sport y competí por el pozo:`} url={`${appUrl()}#/p/${code}`} label="Compartir este campeonato por WhatsApp" />
         {group.logo ? <img className="logo" src={group.logo} alt="" /> : <div className="logo ball">⚽</div>}
         {group.round && <div className="eyebrow">Fecha {group.round}{group.finished ? ' · terminada' : ''}</div>}
         <h1>{group.name}</h1>
@@ -55,7 +56,6 @@ export default function Player({ profile }: { profile: Profile }) {
           ? <div className="potbox">Campeonato amistoso<strong style={{ fontSize: '1.2rem', color: 'var(--txt)' }}>Sin premio en dinero</strong><span className="small muted">{Number(group.players)} jugando</span></div>
           : <div className="potbox">Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>}
       </div>
-      <ShareButton text={`Jugá "${group.name}"${group.round ? ` (Fecha ${group.round})` : ''} en La Cabra Sport y competí por el pozo:`} url={`${appUrl()}#/p/${code}`} label="Invitar amigos a este campeonato" />
       <div className="seg">
         <button className={tab === 'jugar' ? 'on' : ''} onClick={() => setTab('jugar')}>{entries?.some((x) => x.submitted_at) ? 'Mis jugadas' : 'Jugar'}</button>
         <button className={tab === 'ranking' ? 'on' : ''} onClick={() => setTab('ranking')}>Ranking</button>

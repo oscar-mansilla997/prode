@@ -55,7 +55,7 @@ code { background:var(--bg2); padding:2px 6px; border-radius:6px; }
 .logo { width:60px; height:60px; object-fit:contain; margin-bottom:6px; filter:drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
 .logo.ball { display:flex; align-items:center; justify-content:center; font-size:46px; opacity:.85; }
 .pozo { color:var(--gold); font-weight:700; font-size:.95rem; }
-.hero { text-align:center; margin:6px 0 4px; }
+.hero { position:relative; text-align:center; margin:6px 0 4px; }
 .hero h1 { margin:0; font-size:1.25rem; }
 .hero .logo { width:72px; height:72px; }
 .potbox { display:flex; flex-direction:column; align-items:center; margin-top:12px; padding:12px; border:1px solid #3a3320; border-radius:14px; background:linear-gradient(180deg,#1b1810,#14120c); font-size:.8rem; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; }
@@ -133,9 +133,10 @@ input.pct { width:64px; display:inline-block; padding:7px; margin:0; text-align:
 @keyframes pop { from { opacity:0; transform:translate(-50%, 8px); } to { opacity:1; transform:translate(-50%, 0); } }
 
 label.small.muted, .lbl { display:block; color:#b4bfd0; font-size:.8rem; font-weight:600; margin:10px 0 0; }
-.sharebtn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px 14px; margin:8px 0; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--txt); text-decoration:none; font-weight:600; font-size:.95rem; }
+.sharebtn { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--card); color:#63e0b6; text-decoration:none; }
 .sharebtn svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-.sharebtn.solid { background:#10392c; border-color:#1f7a5c; color:#63e0b6; }
+.sharebtn.corner { position:absolute; top:10px; right:10px; }
+.sharebtn.inline { margin-left:8px; vertical-align:middle; }
 
 /* sin barras de scroll visibles (se sigue pudiendo deslizar) */
 * { scrollbar-width: none; -ms-overflow-style: none; }
