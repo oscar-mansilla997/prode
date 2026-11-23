@@ -22,22 +22,12 @@ export default function Admin() {
   const [f, setF] = useState({ name: '', fee: '', pay_alias: '', pct: '' })
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const nav = useNavigate()
-  const [others, setOthers] = useState<Group[]>([])
-  const [orgNames, setOrgNames] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
-    const uid = (await supabase.auth.getUser()).data.user?.id
-    const isOw = (await supabase.rpc('is_owner')).data === true
-    const q = supabase.from('groups').select('*').order('created_at', { ascending: false })
-    const g = await (isOw ? q : q.eq('owner_id', uid!))
-    const all = (g.data as Group[]) ?? []
-    const gl = all.filter((x) => x.owner_id === uid)
-    const ot = all.filter((x) => x.owner_id !== uid)
-    setGroups(gl); setOthers(ot)
-    if (ot.length) {
-      const pr = await supabase.from('profiles').select('id, name').in('id', [...new Set(ot.map((x) => x.owner_id))])
-      setOrgNames(Object.fromEntries(((pr.data as { id: string; name: string }[]) ?? []).map((x) => [x.id, x.name])))
-    }
+    const g = await supabase.from('groups').select('*').order('created_at', { ascending: false })
+    const gl = (g.data as Group[]) ?? []
+    const all = gl
+    setGroups(gl)
     if (all.length) {
       const r = await supabase.from('entries').select('*, profile:profiles(*), group:groups(id, name, fee, logo, owner_id)')
         .in('group_id', all.map((x) => x.id)).eq('status', 'pending').order('submitted_at')
@@ -89,12 +79,12 @@ export default function Admin() {
     <div key={g.id} className="card">
       <div className="row">
         <span className="who">{g.logo ? <img className="crest" style={{ width: 34, height: 34 }} src={g.logo} alt="" /> : <span className="pos">?</span>}
-          <span><strong>{g.name}{g.round ? ` · Fecha ${g.round}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{LEAGUES.find((l) => l.id === g.league_id)?.name ?? 'Campeonato propio'}{orgNames[g.owner_id] && others.some((x) => x.id === g.id) ? ` · de ${orgNames[g.owner_id]}` : ''}</div></span></span>
+          <span><strong>{g.name}{g.round ? ` · Fecha ${g.round}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{LEAGUES.find((l) => l.id === g.league_id)?.name ?? 'Campeonato propio'}</div></span></span>
         <button className={`toggle ${g.active ? 'on' : ''}`} disabled={busy} onClick={() => setActive(g, !g.active)}>{g.active ? 'Visible' : 'Oculto'}</button>
       </div>
       <Link to={`/g/${g.id}`} className="cta">Administrar</Link>
       <div className="sub">
-        {g.finish_notified && g.league_id && ![...groups, ...others].some((x) => x.league_id === g.league_id && x.season === g.season && (x.round ?? 0) > (g.round ?? 0)) && (
+        {g.finish_notified && g.league_id && !groups.some((x) => x.league_id === g.league_id && x.season === g.season && (x.round ?? 0) > (g.round ?? 0)) && (
           <button className="ghost small" disabled={busy} onClick={() => createNext(g)}>Crear fecha siguiente</button>
         )}
         <button className="danger small" disabled={busy} onClick={() => removeGroup(g)}>Eliminar</button>
@@ -111,12 +101,12 @@ export default function Admin() {
         <button className={tab === 'campeonatos' ? 'on' : ''} onClick={() => setTab('campeonatos')}>Campeonatos</button>
         <button className={tab === 'ligas' ? 'on' : ''} onClick={() => setTab('ligas')}>Mis ligas</button>
         <button className={tab === 'equipos' ? 'on' : ''} onClick={() => setTab('equipos')}>Equipos</button>
-        {isOwner && <button className={tab === 'usuarios' ? 'on' : ''} onClick={() => setTab('usuarios')}>Usuarios</button>}
+        <button className={tab === 'usuarios' ? 'on' : ''} onClick={() => setTab('usuarios')}>Usuarios</button>
         {isOwner && <button className={tab === 'organizadores' ? 'on' : ''} onClick={() => setTab('organizadores')}>Organizadores</button>}
       </div>
 
       {tab === 'resumen' && <Resumen />}
-      {tab === 'usuarios' && isOwner && <Usuarios />}
+      {tab === 'usuarios' && <Usuarios />}
       {tab === 'organizadores' && isOwner && <Organizadores />}
       {tab === 'equipos' && <Equipos />}
       {tab === 'ligas' && <OwnLeagues />}
@@ -126,7 +116,7 @@ export default function Admin() {
           <div key={r.id} className="card">
             <div className="row">
               <span className="who"><Avatar url={r.profile.avatar_url} name={r.profile.name} size={42} />
-                <span><strong>{r.profile.name}{(r.num ?? 1) > 1 ? ` · Jugada ${r.num}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{r.group.name}{orgNames[(r.group as { owner_id?: string }).owner_id ?? ''] ? ` · de ${orgNames[(r.group as { owner_id?: string }).owner_id ?? '']}` : ''}</div></span></span>
+                <span><strong>{r.profile.name}{(r.num ?? 1) > 1 ? ` · Jugada ${r.num}` : ''}</strong><div className="small muted" style={{ margin: 0 }}>{r.group.name}</div></span></span>
               {r.group.fee && <strong style={{ color: 'var(--gold)' }}>{r.group.fee}</strong>}
             </div>
             <div className="small">Alias del jugador: <strong>{r.profile.alias}</strong></div>
@@ -162,20 +152,13 @@ export default function Admin() {
               <button type="button" className="link" onClick={() => setCreating(false)}>Cancelar</button>
             </form>
           )}
-          <h3>Tus prodes en juego</h3>
-          {groups.filter((g) => !g.finish_notified).length === 0 && <p className="empty">Todavía no tenés prodes propios en juego. Creá uno con el botón de arriba.</p>}
+          <h3>Prodes en juego</h3>
+          {groups.filter((g) => !g.finish_notified).length === 0 && <p className="empty">No hay prodes en juego. Creá uno con el botón de arriba.</p>}
           {groups.filter((g) => !g.finish_notified).map(groupRow)}
           {groups.some((g) => g.finish_notified) && (
             <>
-              <h3>Tus prodes terminados</h3>
+              <h3>Prodes terminados</h3>
               {groups.filter((g) => g.finish_notified).map(groupRow)}
-            </>
-          )}
-          {others.length > 0 && (
-            <>
-              <h3>Prodes de tus organizadores</h3>
-              <p className="small muted">Los ves y los podés administrar igual que los tuyos. El pozo y el alias de cada uno son los de su organizador.</p>
-              {others.map(groupRow)}
             </>
           )}
         </>
