@@ -25,6 +25,7 @@ export default function Admin() {
   const [pct, setPct] = useState('')
   const [fee, setFee] = useState('')
   const [alias, setAlias] = useState('')
+  const [showDef, setShowDef] = useState(false)
   const [others, setOthers] = useState<Group[]>([])
   const [orgNames, setOrgNames] = useState<Record<string, string>>({})
   const [pctMsg, setPctMsg] = useState('')
@@ -169,7 +170,8 @@ export default function Admin() {
 
       {tab === 'campeonatos' && (
         <>
-          <div className="card pot">
+          <button className="ghost" onClick={() => setShowDef(!showDef)}>{showDef ? 'Ocultar valores generales ▴' : 'Valores generales: alias, valor y porcentaje ▾'}</button>
+          {showDef && <div className="card pot">
             <div className="eyebrow">Valor y ganancia</div>
             <label className="lbl">Tu alias para que te transfieran</label>
             <input placeholder="Ej: mi.alias.mp" value={alias} onChange={(e) => setAlias(e.target.value)} />
@@ -186,7 +188,7 @@ export default function Admin() {
             <p className="small muted">Vale para cada fecha: se descuenta del total recaudado y el resto es el premio. Se aplica a las fechas que todavía no empezaron, y las siguientes se abren con el mismo valor y porcentaje. No cambia las fechas en juego ni las ya terminadas. Ej: 4 jugadores × $5.000 con 10% → pozo $18.000 y te quedan $2.000.</p>
             <button className="primary small" onClick={savePct}>Guardar</button>
             {pctMsg && <span className="small muted"> {pctMsg}</span>}
-          </div>
+          </div>}
           {err && <p className="msg">{err}</p>}
           {!creating ? <button className="primary" onClick={() => setCreating(true)}>+ Crear un prode</button> : (
             <form className="card" onSubmit={createCustom}>
