@@ -165,6 +165,12 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   const done = group.finish_notified
   const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
   const [err, setErr] = useState('')
+  const [ol, setOl] = useState<{ id: string; name: string; teams: { id: string; name: string; logo: string | null }[] }[]>([])
+  const [olSel, setOlSel] = useState('')
+  useEffect(() => {
+    supabase.from('own_leagues').select('id, name, own_league_teams(team:teams(id, name, logo))').order('name').then(({ data }) =>
+      setOl(((data as unknown as { id: string; name: string; own_league_teams: { team: { id: string; name: string; logo: string | null } | null }[] }[]) ?? []).map((l) => ({ id: l.id, name: l.name, teams: l.own_league_teams.map((x) => x.team).filter(Boolean) as { id: string; name: string; logo: string | null }[] }))))
+  }, [])
   const [src, setSrc] = useState<'search' | 'own' | 'comp'>('search')
   const [files, setFiles] = useState<{ home: File | null; away: File | null }>({ home: null, away: null })
   const [fc, setFc] = useState<{ home: string | null; away: string | null }>({ home: null, away: null })
@@ -275,9 +281,18 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
         <h3>{group.league_id ? 'Agregar partido' : 'Armar un partido (equipos propios)'}</h3>
         {done && <p className="small" style={{ color: 'var(--gold)' }}>Esta fecha ya tuvo ganador. El partido que cargues va a la fecha siguiente, con su propio pozo y ganador.</p>}
         <>
+          {ol.length > 0 && (
+            <>
+              <label className="lbl">Liga propia (opcional)</label>
+              <select value={olSel} onChange={(e) => { setOlSel(e.target.value); const l = ol.find((x) => x.id === e.target.value); if (l) setF({ ...f, round: f.round || l.name }) }}>
+                <option value="">Ninguna: todos mis equipos</option>
+                {ol.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </>
+          )}
           <label className="lbl">Nombre del torneo o ronda (opcional)</label>
           <input placeholder="Ej: Liga del pueblo, Fecha 3" value={f.round} onChange={(e) => setF({ ...f, round: e.target.value })} />
-          <datalist id="equipos">{teams.map((t) => <option key={t.id} value={t.name} />)}</datalist>
+          <datalist id="equipos">{(olSel ? ol.find((l) => l.id === olSel)?.teams ?? [] : teams).map((t) => <option key={t.id} value={t.name} />)}</datalist>
           <label className="lbl">Equipo local</label>
           <input list="equipos" placeholder="Escribí el nombre" value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required />
           {f.home.trim() && !fc.home && !known(f.home)?.logo && (

@@ -3,13 +3,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import { DEMO, feeNum, money, supabase, type Entry, type Group, type Profile } from '../supabase'
 import { Avatar, PredList } from '../components'
 import { LEAGUES } from './AutoImport'
+import OwnLeagues from './OwnLeagues'
 import { ask, toast } from '../dialogs'
 import { IMG_HINT, uploadCrest } from '../upload'
 
 type Req = Entry & { profile: Profile; group: { id: string; name: string; fee: string | null; logo: string | null } }
 
 export default function Admin() {
-  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'equipos' | 'usuarios' | 'organizadores'>('resumen')
+  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'equipos' | 'usuarios' | 'organizadores' | 'ligas'>('resumen')
   const [isOwner, setIsOwner] = useState(false)
   useEffect(() => { supabase.rpc('is_owner').then(({ data }) => setIsOwner(data === true)) }, [])
   const [groups, setGroups] = useState<Group[]>([])
@@ -134,6 +135,7 @@ export default function Admin() {
         <button className={tab === 'resumen' ? 'on' : ''} onClick={() => setTab('resumen')}>Resumen</button>
         <button className={tab === 'solicitudes' ? 'on' : ''} onClick={() => setTab('solicitudes')}>Solicitudes{reqs.length > 0 && <span className="n">{reqs.length}</span>}</button>
         <button className={tab === 'campeonatos' ? 'on' : ''} onClick={() => setTab('campeonatos')}>Campeonatos</button>
+        <button className={tab === 'ligas' ? 'on' : ''} onClick={() => setTab('ligas')}>Mis ligas</button>
         <button className={tab === 'equipos' ? 'on' : ''} onClick={() => setTab('equipos')}>Equipos</button>
         {isOwner && <button className={tab === 'usuarios' ? 'on' : ''} onClick={() => setTab('usuarios')}>Usuarios</button>}
         {isOwner && <button className={tab === 'organizadores' ? 'on' : ''} onClick={() => setTab('organizadores')}>Organizadores</button>}
@@ -143,6 +145,7 @@ export default function Admin() {
       {tab === 'usuarios' && isOwner && <Usuarios />}
       {tab === 'organizadores' && isOwner && <Organizadores />}
       {tab === 'equipos' && <Equipos />}
+      {tab === 'ligas' && <OwnLeagues />}
       {tab === 'solicitudes' && (reqs.length === 0 ? <p className="empty">No hay solicitudes pendientes.<br />Cuando alguien envíe su jugada, aparece acá para que confirmes el pago.</p> : reqs.map((r) => {
         const digits = r.profile.phone.replace(/\D/g, '')
         return (
