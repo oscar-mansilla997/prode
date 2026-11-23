@@ -278,13 +278,22 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
           <datalist id="equipos">{teams.map((t) => <option key={t.id} value={t.name} />)}</datalist>
           <label className="lbl">Equipo local</label>
           <input list="equipos" placeholder="Escribí el nombre" value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required />
-          <label className="lbl">Escudo del local (opcional, si no sale solo)</label>
-          <input type="file" accept="image/*" onChange={(e) => setFiles({ ...files, home: e.target.files?.[0] ?? null })} />
+          {f.home.trim() && !fc.home && !known(f.home)?.logo && (
+            <>
+              <label className="lbl">Escudo del local (no lo encontré, subilo)</label>
+              <input type="file" accept="image/*" onChange={(e) => setFiles({ ...files, home: e.target.files?.[0] ?? null })} />
+            </>
+          )}
           <label className="lbl">Equipo visitante</label>
           <input list="equipos" placeholder="Escribí el nombre" value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required />
-          <label className="lbl">Escudo del visitante (opcional, si no sale solo)</label>
-          <input type="file" accept="image/*" onChange={(e) => setFiles({ ...files, away: e.target.files?.[0] ?? null })} />
-          <p className="small muted">{IMG_HINT} El equipo queda guardado con su escudo en <strong>Admin → Equipos</strong>, y la próxima vez aparece solo al escribir.</p>
+          {f.away.trim() && !fc.away && !known(f.away)?.logo && (
+            <>
+              <label className="lbl">Escudo del visitante (no lo encontré, subilo)</label>
+              <input type="file" accept="image/*" onChange={(e) => setFiles({ ...files, away: e.target.files?.[0] ?? null })} />
+            </>
+          )}
+          {((f.home.trim() && !fc.home && !known(f.home)?.logo) || (f.away.trim() && !fc.away && !known(f.away)?.logo)) && <p className="small muted">{IMG_HINT}</p>}
+          <p className="small muted">El equipo queda guardado con su escudo en <strong>Admin → Equipos</strong>, y la próxima vez aparece solo al escribir.</p>
           <label className="lbl">Día y hora del partido</label>
           <input type="datetime-local" value={f.kickoff} onChange={(e) => setF({ ...f, kickoff: e.target.value })} required />
           {(f.home.trim() || f.away.trim()) && (
