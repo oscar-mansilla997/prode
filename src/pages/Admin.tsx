@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DEMO, feeNum, money, supabase, type Entry, type Group, type Profile } from '../supabase'
 import { Avatar, PredList } from '../components'
-import { LEAGUES, importNext } from './AutoImport'
+import { LEAGUES } from './AutoImport'
 import { ask, toast } from '../dialogs'
 import { IMG_HINT, uploadCrest } from '../upload'
 
@@ -81,17 +81,6 @@ export default function Admin() {
     if (error) setErr(error.message)
     await load(); setBusy(false)
   }
-  async function toggleLeague(l: { id: number; name: string }, g?: Group) {
-    if (g) return setActive(g, !g.active)
-    setBusy(true); setErr('')
-    const base = groups[0]
-    const { data, error } = await supabase.from('groups')
-      .insert({ name: `Prode ${l.name}`, league_id: l.id, fee: base?.fee ?? null, pay_alias: base?.pay_alias ?? null, commission_pct: base?.commission_pct ?? 0 })
-      .select().single()
-    if (error) { setBusy(false); return setErr(error.message) }
-    try { await importNext((data as Group).id, l.id) } catch { /* se reintenta al abrir el campeonato */ }
-    await load(); setBusy(false)
-  }
   async function createNext(g: Group) {
     setBusy(true); setErr('')
     const { data, error } = await supabase.from('groups').insert({
@@ -114,7 +103,7 @@ export default function Admin() {
     let logo: string | null = null
     try { if (logoFile) logo = await uploadCrest(logoFile) } catch (x) { setBusy(false); return setErr((x as Error).message) }
     const { data, error } = await supabase.from('groups')
-      .insert({ name: f.name, logo, fee: f.fee || null, pay_alias: f.pay_alias || groups[0]?.pay_alias || null, commission_pct: Math.min(100, Math.max(0, Number(f.pct || pct) || 0)) })
+      .insert({ name: f.name, logo, fee: f.fee || (fee && fee !== '0' ? fee : null), pay_alias: f.pay_alias || alias.trim() || null, commission_pct: Math.min(100, Math.max(0, Number(f.pct || pct) || 0)) })
       .select().single()
     setBusy(false)
     if (error) return setErr(error.message)
@@ -196,33 +185,9 @@ export default function Admin() {
             {pctMsg && <span className="small muted"> {pctMsg}</span>}
           </div>
           {err && <p className="msg">{err}</p>}
-          <h3>Fechas en juego</h3>
-          {groups.filter((g) => !g.finish_notified).length === 0 && <p className="empty">No tenés ninguna fecha en juego. Agregá una liga acá abajo.</p>}
-          {groups.filter((g) => !g.finish_notified).map(groupRow)}
-          {groups.some((g) => g.finish_notified) && (
-            <>
-              <h3>Fechas terminadas</h3>
-              {groups.filter((g) => g.finish_notified).map(groupRow)}
-            </>
-          )}
-          {others.length > 0 && (
-            <>
-              <h3>Campeonatos de tus organizadores</h3>
-              <p className="small muted">Los ves y los podés administrar igual que los tuyos. El pozo y el alias de cada uno son los de su organizador.</p>
-              {others.map(groupRow)}
-            </>
-          )}
-          <h3>Agregar una liga</h3>
-          <p className="small muted">Trae sola la fecha que viene, con partidos y escudos. Cuando termina, se abre sola la siguiente. Las que ya tenés no aparecen acá.</p>
-          {LEAGUES.filter((l) => !groups.some((g) => g.league_id === l.id)).map((l) => (
-            <div key={l.id} className="card row">
-              <strong>{l.name}</strong>
-              <button className="primary small" disabled={busy} onClick={() => toggleLeague(l)}>Agregar</button>
-            </div>
-          ))}
-          {!creating ? <button className="ghost" onClick={() => setCreating(true)}>Crear campeonato propio (armo equipos y partidos)</button> : (
+          {!creating ? <button className="primary" onClick={() => setCreating(true)}>+ Crear un prode</button> : (
             <form className="card" onSubmit={createCustom}>
-              <h3>Campeonato propio</h3>
+              <h3>Nuevo prode</h3>
               <label className="lbl">Nombre del campeonato</label>
               <input placeholder="Ej: Copa de los Amigos" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
               <label className="lbl">Logo del campeonato (opcional)</label>
@@ -237,6 +202,22 @@ export default function Admin() {
               <button className="primary" disabled={busy}>Crear</button>
               <button type="button" className="link" onClick={() => setCreating(false)}>Cancelar</button>
             </form>
+          )}
+          <h3>Fechas en juego</h3>
+          {groups.filter((g) => !g.finish_notified).length === 0 && <p className="empty">No tenés ningún prode en juego. Creá uno con el botón de arriba.</p>}
+          {groups.filter((g) => !g.finish_notified).map(groupRow)}
+          {groups.some((g) => g.finish_notified) && (
+            <>
+              <h3>Fechas terminadas</h3>
+              {groups.filter((g) => g.finish_notified).map(groupRow)}
+            </>
+          )}
+          {others.length > 0 && (
+            <>
+              <h3>Campeonatos de tus organizadores</h3>
+              <p className="small muted">Los ves y los podés administrar igual que los tuyos. El pozo y el alias de cada uno son los de su organizador.</p>
+              {others.map(groupRow)}
+            </>
           )}
         </>
       )}

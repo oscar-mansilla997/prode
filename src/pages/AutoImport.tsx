@@ -146,6 +146,12 @@ export default function AutoImport({ group, matches, reload }: { group: Group; m
   )
 }
 
+async function getTeams(name: string): Promise<Ev[]> {
+  const res = await fetch(`${BASE}/searchteams.php?t=${encodeURIComponent(name)}`)
+  if (!res.ok) throw new Error('La fuente respondió ' + res.status)
+  return ((await res.json()).teams as Ev[] | null) ?? []
+}
+
 const crestCache = new Map<string, string | null>()
 /** Escudo de una selección o club buscando su nombre en TheSportsDB */
 export async function crestFor(name: string): Promise<string | null> {
@@ -308,6 +314,68 @@ export function EventPicker({ group, matches, reload, noManual }: { group: Group
         </>
       )}
       <button className="ghost" disabled={busy} onClick={results}>Actualizar resultados</button>
+      {msg && <p className="small">{msg}</p>}
+    </div>
+  )
+}
+
+/** Buscar un partido por el nombre de un equipo (ej: River) y agregarlo */
+export function MatchSearch({ group, matches, reload }: { group: Group; matches: Match[]; reload: () => void }) {
+  const [q, setQ] = useState('')
+  const [list, setList] = useState<Ev[] | null>(null)
+  const [msg, setMsg] = useState('')
+  const [busy, setBusy] = useState(false)
+  const have = new Set(matches.map((m) => m.external_id))
+
+  async function search(ev?: React.FormEvent) {
+    ev?.preventDefault()
+    if (q.trim().length < 3) return setMsg('Escribí al menos 3 letras del equipo.')
+    setBusy(true); setMsg(''); setList(null)
+    try {
+      const teams = (await getTeams(q.trim())).filter((t) => t.strSport === 'Soccer').slice(0, 3)
+      const res = await Promise.all(teams.map((t) => getEvents(`eventsnext.php?id=${t.idTeam}`).catch(() => [] as Ev[])))
+      const seen = new Set<string>()
+      const out = res.flat().filter((e) => e.idEvent && e.strHomeTeam && e.strAwayTeam && !seen.has(String(e.idEvent)) && seen.add(String(e.idEvent)))
+      out.sort((a, b) => String(a.strTimestamp ?? a.dateEvent).localeCompare(String(b.strTimestamp ?? b.dateEvent)))
+      setList(out)
+      if (!out.length) setMsg('No encontré partidos próximos de ese equipo. Probá con otro nombre o armalo vos en "Armarlo yo".')
+    } catch (e) { setMsg('No se pudo buscar: ' + (e as Error).message) }
+    setBusy(false)
+  }
+  async function add(e: Ev) {
+    setBusy(true); setMsg('')
+    const ko = new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').toISOString()
+    const { error } = await supabase.from('matches').upsert({
+      group_id: group.id, external_id: String(e.idEvent), round: e.strLeague ?? null,
+      home: e.strHomeTeam, away: e.strAwayTeam, kickoff: ko,
+      home_logo: e.strHomeTeamBadge ?? null, away_logo: e.strAwayTeamBadge ?? null,
+    }, { onConflict: 'group_id,external_id' })
+    setBusy(false)
+    if (error) return setMsg(error.message)
+    setMsg(`Agregado: ${e.strHomeTeam} vs ${e.strAwayTeam}`); reload()
+  }
+  return (
+    <div className="card">
+      <h3>Buscar un partido</h3>
+      <form onSubmit={search}>
+        <label className="lbl">Equipo (ej: River)</label>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Escribí el nombre del equipo" />
+        <button className="primary" disabled={busy}>{busy ? 'Buscando…' : 'Buscar partidos'}</button>
+      </form>
+      {(list ?? []).filter((e) => !have.has(String(e.idEvent))).map((e) => {
+        const ko = new Date((e.strTimestamp ?? `${e.dateEvent}T${e.strTime ?? '00:00:00'}`) + 'Z').toISOString()
+        return (
+          <div key={String(e.idEvent)} className="card match">
+            <div className="muted small" style={{ margin: 0 }}>{fmtDate(ko)}{e.strLeague ? ` · ${e.strLeague}` : ''}</div>
+            <div className="teams" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+              <span className="team"><Crest url={e.strHomeTeamBadge ?? null} />{e.strHomeTeam}</span>
+              <span className="muted">vs</span>
+              <span className="team right">{e.strAwayTeam}<Crest url={e.strAwayTeamBadge ?? null} /></span>
+            </div>
+            <button className="primary" disabled={busy} onClick={() => add(e)}>Agregar este partido</button>
+          </div>
+        )
+      })}
       {msg && <p className="small">{msg}</p>}
     </div>
   )

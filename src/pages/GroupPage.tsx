@@ -5,7 +5,7 @@ import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import { ask, copyText, notice, toast } from '../dialogs'
 import ShareButton from '../Share'
 import { IMG_HINT, saveTeam, uploadCrest } from '../upload'
-import AutoImport, { EventPicker, FRIENDLIES, crestFor, importNext, refreshResults } from './AutoImport'
+import AutoImport, { EventPicker, FRIENDLIES, MatchSearch, crestFor, importNext, refreshResults } from './AutoImport'
 
 type Tab = 'participantes' | 'partidos' | 'ranking' | 'ajustes'
 
@@ -165,7 +165,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   const done = group.finish_notified
   const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
   const [err, setErr] = useState('')
-  const [src, setSrc] = useState<'own' | 'comp'>('own')
+  const [src, setSrc] = useState<'search' | 'own' | 'comp'>('search')
   const [files, setFiles] = useState<{ home: File | null; away: File | null }>({ home: null, away: null })
   const [fc, setFc] = useState<{ home: string | null; away: string | null }>({ home: null, away: null })
   const [teams, setTeams] = useState<{ id: string; name: string; logo: string | null }[]>([])
@@ -261,16 +261,18 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
       <ReviewBanner group={group} matches={matches} reload={reload} />
       {!group.league_id && (
         <div className="seg">
-          <button className={src === 'own' ? 'on' : ''} onClick={() => setSrc('own')}>Mi base propia</button>
-          <button className={src === 'comp' ? 'on' : ''} onClick={() => setSrc('comp')}>De una competición</button>
+          <button className={src === 'search' ? 'on' : ''} onClick={() => setSrc('search')}>Buscar partido</button>
+          <button className={src === 'own' ? 'on' : ''} onClick={() => setSrc('own')}>Armarlo yo</button>
+          <button className={src === 'comp' ? 'on' : ''} onClick={() => setSrc('comp')}>Por competición</button>
         </div>
       )}
       {Number(group.league_id) === FRIENDLIES && <EventPicker group={group} matches={matches} reload={reload} />}
+      {!group.league_id && src === 'search' && <MatchSearch group={group} matches={matches} reload={reload} />}
       {!group.league_id && src === 'comp' && <EventPicker group={group} matches={matches} reload={reload} noManual />}
       {group.league_id && Number(group.league_id) !== FRIENDLIES && <AutoImport group={group} matches={matches} reload={reload} />}
       {(group.league_id || src === 'own') && Number(group.league_id) !== FRIENDLIES && (
       <form className="card" onSubmit={add}>
-        <h3>{group.league_id ? 'Agregar partido' : 'Agregar un partido de tu base propia'}</h3>
+        <h3>{group.league_id ? 'Agregar partido' : 'Armar un partido (equipos propios)'}</h3>
         {done && <p className="small" style={{ color: 'var(--gold)' }}>Esta fecha ya tuvo ganador. El partido que cargues va a la fecha siguiente, con su propio pozo y ganador.</p>}
         <>
           <label className="lbl">Nombre del torneo o ronda (opcional)</label>
