@@ -4,7 +4,7 @@ import { feeNum, isFinished, money, points, sortMatches, supabase, statusLabel, 
 import { Avatar, Crest, Ranking, fmtDate } from '../components'
 import { ask, copyText, notice, toast } from '../dialogs'
 import ShareButton from '../Share'
-import { IMG_HINT, uploadCrest } from '../upload'
+import { IMG_HINT, saveTeam, uploadCrest } from '../upload'
 import AutoImport, { EventPicker, FRIENDLIES, crestFor, importNext, refreshResults } from './AutoImport'
 
 type Tab = 'participantes' | 'partidos' | 'ranking' | 'ajustes'
@@ -165,6 +165,7 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
   const done = group.finish_notified
   const [f, setF] = useState({ round: '', home: '', away: '', kickoff: '' })
   const [err, setErr] = useState('')
+  const [files, setFiles] = useState<{ home: File | null; away: File | null }>({ home: null, away: null })
   const [fc, setFc] = useState<{ home: string | null; away: string | null }>({ home: null, away: null })
   const [teams, setTeams] = useState<{ id: string; name: string; logo: string | null }[]>([])
   useEffect(() => {
@@ -224,6 +225,10 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
     e.preventDefault()
     const h = { name: f.home.trim(), logo: fc.home }, a = { name: f.away.trim(), logo: fc.away }
     if (!h.name || !a.name) return setErr('Escribí los dos equipos.')
+    try {
+      if (files.home) h.logo = await uploadCrest(files.home)
+      if (files.away) a.logo = await uploadCrest(files.away)
+    } catch (x) { return setErr((x as Error).message) }
     if (h.name.toLowerCase() === a.name.toLowerCase()) return setErr('Elegí dos equipos distintos.')
     const target = done ? await nextGroup() : group
     if (!target) return
@@ -233,6 +238,9 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
     })
     setErr(error?.message ?? '')
     if (!error) {
+      await Promise.all([saveTeam(h.name, h.logo), saveTeam(a.name, a.logo)])
+      setFiles({ home: null, away: null })
+      setTeams((l) => [...l, ...[h, a].filter((x) => !l.some((t) => t.name.toLowerCase() === x.name.toLowerCase())).map((x) => ({ id: x.name, name: x.name, logo: x.logo }))])
       setF({ ...f, home: '', away: '' })
       if (done) { toast('Partido cargado en la fecha siguiente'); nav(`/g/${target.id}`) } else reload()
     }
@@ -261,17 +269,22 @@ function MatchesAdmin({ group, matches, reload }: { group: Group; matches: Match
           <datalist id="equipos">{teams.map((t) => <option key={t.id} value={t.name} />)}</datalist>
           <label className="lbl">Equipo local</label>
           <input list="equipos" placeholder="Escribí el nombre" value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required />
+          <label className="lbl">Escudo del local (opcional, si no sale solo)</label>
+          <input type="file" accept="image/*" onChange={(e) => setFiles({ ...files, home: e.target.files?.[0] ?? null })} />
           <label className="lbl">Equipo visitante</label>
           <input list="equipos" placeholder="Escribí el nombre" value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required />
+          <label className="lbl">Escudo del visitante (opcional, si no sale solo)</label>
+          <input type="file" accept="image/*" onChange={(e) => setFiles({ ...files, away: e.target.files?.[0] ?? null })} />
+          <p className="small muted">{IMG_HINT} El equipo queda guardado con su escudo en <strong>Admin → Equipos</strong>, y la próxima vez aparece solo al escribir.</p>
           <label className="lbl">Día y hora del partido</label>
           <input type="datetime-local" value={f.kickoff} onChange={(e) => setF({ ...f, kickoff: e.target.value })} required />
           {(f.home.trim() || f.away.trim()) && (
             <div className="card match">
               <div className="muted small" style={{ margin: 0 }}>Así va a quedar{f.kickoff ? ' · ' + fmtDate(new Date(f.kickoff).toISOString()) : ''}</div>
               <div className="teams" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
-                <span className="team"><Crest url={fc.home} />{f.home || '—'}</span>
+                <span className="team"><Crest url={files.home ? URL.createObjectURL(files.home) : fc.home} />{f.home || '—'}</span>
                 <span className="muted">vs</span>
-                <span className="team right">{f.away || '—'}<Crest url={fc.away} /></span>
+                <span className="team right">{f.away || '—'}<Crest url={files.away ? URL.createObjectURL(files.away) : fc.away} /></span>
               </div>
             </div>
           )}

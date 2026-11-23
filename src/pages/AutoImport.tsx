@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { DEMO, supabase, type Group, type Match } from '../supabase'
 import { Crest, fmtDate } from '../components'
+import { saveTeam } from '../upload'
 
 // Fuente gratuita: TheSportsDB (clave pública "123")
 const BASE = 'https://www.thesportsdb.com/api/v1/json/123'
@@ -233,6 +234,7 @@ export function EventPicker({ group, matches, reload }: { group: Group; matches:
       group_id: group.id, round: mixed ? null : 'Amistoso', home: man.home.trim(), away: man.away.trim(), kickoff: new Date(man.when).toISOString(),
       home_logo: mc.home, away_logo: mc.away,
     })
+    if (!error) await Promise.all([saveTeam(man.home, mc.home), saveTeam(man.away, mc.away)])
     setBusy(false)
     if (error) return setMsg(error.message)
     setMan({ home: '', away: '', when: '' }); setMsg('Partido agregado.'); reload()

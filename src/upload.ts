@@ -19,3 +19,13 @@ export async function uploadCrest(file: File): Promise<string> {
   if (up.error) throw new Error(up.error.message)
   return supabase.storage.from('crests').getPublicUrl(path).data.publicUrl
 }
+
+/** Guarda el equipo en tu base (si todavía no está) para encontrarlo después sin volver a cargarlo */
+export async function saveTeam(name: string, logo: string | null): Promise<void> {
+  const n = name.trim()
+  if (!n) return
+  const { data } = await supabase.from('teams').select('id, logo').ilike('name', n.replace(/[%_]/g, ''))
+  const ex = ((data as { id: string; logo: string | null }[]) ?? [])[0]
+  if (!ex) { await supabase.from('teams').insert({ name: n, logo }); return }
+  if (!ex.logo && logo) await supabase.from('teams').update({ logo }).eq('id', ex.id)
+}
