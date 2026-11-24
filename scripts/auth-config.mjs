@@ -3,10 +3,11 @@ const REF = process.env.SUPABASE_PROJECT_REF || 'mrmjpohptjnsjnszjfnq'
 const TOKEN = process.env.SUPABASE_ACCESS_TOKEN
 if (!TOKEN) { console.log('Sin SUPABASE_ACCESS_TOKEN: nada para hacer.'); process.exit(0) }
 
-const SITE = 'https://oscar-mansilla997.github.io/prode/'
+const SITE = 'https://lacabrasport.site/'
+const OLD = 'https://oscar-mansilla997.github.io/prode/'
 const body = {
   site_url: SITE,
-  uri_allow_list: `${SITE},${SITE}**,http://localhost:5173/**`,
+  uri_allow_list: `${SITE},${SITE}**,https://www.lacabrasport.site/**,${OLD},${OLD}**,http://localhost:5173/**`,
   mailer_subjects_recovery: 'Recuperá tu contraseña · La Cabra Sport',
   mailer_templates_recovery_content:
     '<div style="font-family:Arial,sans-serif"><h2>Recuperá tu contraseña</h2>' +

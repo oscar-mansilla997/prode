@@ -29,7 +29,7 @@ let res = await fetch(`https://api.supabase.com/v1/projects/${REF}/secrets`, {
   body: JSON.stringify([
     { name: 'VAPID_PUBLIC_KEY', value: have.vapid_public },
     { name: 'VAPID_PRIVATE_KEY', value: have.vapid_private },
-    { name: 'VAPID_SUBJECT', value: 'https://oscar-mansilla997.github.io/prode/' },
+    { name: 'VAPID_SUBJECT', value: 'https://lacabrasport.site/' },
     { name: 'PUSH_SECRET', value: have.push_secret },
   ]),
 })
