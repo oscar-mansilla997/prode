@@ -30,12 +30,12 @@ export async function saveTeam(name: string, logo: string | null): Promise<void>
   if (!ex.logo && logo) await supabase.from('teams').update({ logo }).eq('id', ex.id)
 }
 
-export const BANNER_HINT = 'Ideal: imagen horizontal de 1200 × 600 px (proporción 2:1, medio rectangular), JPG o PNG, de menos de 2 MB. Si es de otra medida, la app la recorta al centro para que ocupe todo el banner.'
+export const BANNER_HINT = 'Ideal: imagen horizontal de 1200 × 400 px (proporción 3:1), JPG o PNG, de menos de 2 MB. Si es de otra medida, la app la recorta al centro para que ocupe todo el banner.'
 
-/** Deja el banner en 1200 × 600 (recorte centrado, sin deformar) y lo sube. Devuelve la URL pública. */
+/** Deja el banner en 1200 × 400 (recorte centrado, sin deformar) y lo sube. Devuelve la URL pública. */
 export async function uploadBanner(file: File): Promise<string> {
   const bmp = await createImageBitmap(file)
-  const W = 1200, H = 600
+  const W = 1200, H = 400
   const k = Math.max(W / bmp.width, H / bmp.height)
   const w = bmp.width * k, h = bmp.height * k
   const c = document.createElement('canvas')
