@@ -29,3 +29,23 @@ export async function saveTeam(name: string, logo: string | null): Promise<void>
   if (!ex) { await supabase.from('teams').insert({ name: n, logo }); return }
   if (!ex.logo && logo) await supabase.from('teams').update({ logo }).eq('id', ex.id)
 }
+
+export const BANNER_HINT = 'Ideal: imagen horizontal de 1200 × 400 px (proporción 3:1), JPG o PNG, de menos de 2 MB. Si es de otra medida, la app la recorta al centro para que ocupe todo el banner.'
+
+/** Deja el banner en 1200 × 400 (recorte centrado, sin deformar) y lo sube. Devuelve la URL pública. */
+export async function uploadBanner(file: File): Promise<string> {
+  const bmp = await createImageBitmap(file)
+  const W = 1200, H = 400
+  const k = Math.max(W / bmp.width, H / bmp.height)
+  const w = bmp.width * k, h = bmp.height * k
+  const c = document.createElement('canvas')
+  c.width = W; c.height = H
+  const ctx = c.getContext('2d')!
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(bmp, (W - w) / 2, (H - h) / 2, w, h)
+  const blob: Blob = await new Promise((ok, bad) => c.toBlob((b) => (b ? ok(b) : bad(new Error('No pude leer la imagen'))), 'image/jpeg', 0.88))
+  const path = `${crypto.randomUUID()}.jpg`
+  const up = await supabase.storage.from('banners').upload(path, blob, { contentType: 'image/jpeg' })
+  if (up.error) throw new Error(up.error.message)
+  return supabase.storage.from('banners').getPublicUrl(path).data.publicUrl
+}

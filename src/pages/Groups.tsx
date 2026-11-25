@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PushBanner } from '../PushPrompt'
+import Banner from '../Banner'
 import { isFree, money, supabase, statusLabel, type Entry, type Prode } from '../supabase'
 
 export default function Groups() {
@@ -23,6 +24,7 @@ export default function Groups() {
   return (
     <>
       <PushBanner />
+      <Banner />
       <div className="eyebrow" style={{ marginTop: 8 }}>Torneos disponibles</div>
       <h2 style={{ marginTop: 4 }}>Campeonatos</h2>
       {prodes === null ? <p className="muted">Cargando…</p> : prodes.length === 0 ? <p className="empty">Todavía no hay campeonatos habilitados.</p> : (

@@ -5,12 +5,12 @@ import { Avatar, PredList } from '../components'
 import { LEAGUES } from './AutoImport'
 import OwnLeagues from './OwnLeagues'
 import { ask, toast } from '../dialogs'
-import { IMG_HINT, uploadCrest } from '../upload'
+import { BANNER_HINT, IMG_HINT, uploadBanner, uploadCrest } from '../upload'
 
 type Req = Entry & { profile: Profile; group: { id: string; name: string; fee: string | null; logo: string | null } }
 
 export default function Admin() {
-  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'equipos' | 'usuarios' | 'organizadores' | 'ligas' | 'papelera'>('resumen')
+  const [tab, setTab] = useState<'resumen' | 'solicitudes' | 'campeonatos' | 'equipos' | 'usuarios' | 'organizadores' | 'ligas' | 'papelera' | 'publicidad'>('resumen')
   const [isOwner, setIsOwner] = useState(false)
   useEffect(() => { supabase.rpc('is_owner').then(({ data }) => setIsOwner(data === true)) }, [])
   const [groups, setGroups] = useState<Group[]>([])
@@ -103,6 +103,7 @@ export default function Admin() {
         <button className={tab === 'equipos' ? 'on' : ''} onClick={() => setTab('equipos')}>Equipos</button>
         <button className={tab === 'papelera' ? 'on' : ''} onClick={() => setTab('papelera')}>Papelera</button>
         <button className={tab === 'usuarios' ? 'on' : ''} onClick={() => setTab('usuarios')}>Usuarios</button>
+        {isOwner && <button className={tab === 'publicidad' ? 'on' : ''} onClick={() => setTab('publicidad')}>Publicidad</button>}
         {isOwner && <button className={tab === 'organizadores' ? 'on' : ''} onClick={() => setTab('organizadores')}>Organizadores</button>}
       </div>
 
@@ -110,6 +111,7 @@ export default function Admin() {
       {tab === 'usuarios' && <Usuarios />}
       {tab === 'organizadores' && isOwner && <Organizadores />}
       {tab === 'equipos' && <Equipos />}
+      {tab === 'publicidad' && isOwner && <Publicidad />}
       {tab === 'papelera' && <Papelera onRestored={load} />}
       {tab === 'ligas' && <OwnLeagues />}
       {tab === 'solicitudes' && (reqs.length === 0 ? <p className="empty">No hay solicitudes pendientes.<br />Cuando alguien envíe su jugada, aparece acá para que confirmes el pago.</p> : reqs.map((r) => {
@@ -364,6 +366,77 @@ function Papelera({ onRestored }: { onRestored: () => void }) {
           <strong>{r.name}</strong>
           <div className="small muted">Eliminado el {new Date(r.deleted_at).toLocaleString('es-AR')}</div>
           <button className="primary small" onClick={() => restore(r.id)}>Restaurar</button>
+        </div>
+      ))}
+    </>
+  )
+}
+
+type Ban = { id: string; name: string; image_url: string; link_url: string | null; active: boolean; ends_at: string | null; views: number; clicks: number }
+function Publicidad() {
+  const [rows, setRows] = useState<Ban[] | null>(null)
+  const [f, setF] = useState({ name: '', link: '', ends: '' })
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('banners').select('*').order('created_at', { ascending: false })
+    setRows((data as Ban[]) ?? [])
+  }, [])
+  useEffect(() => { load() }, [load])
+  const preview = file ? URL.createObjectURL(file) : null
+  async function add(e: React.FormEvent) {
+    e.preventDefault()
+    if (!file) return setErr('Elegí la imagen del banner.')
+    let link = f.link.trim()
+    if (link && !/^https?:\/\//i.test(link)) link = 'https://' + link
+    setBusy(true); setErr('')
+    try {
+      const image_url = await uploadBanner(file)
+      const { error } = await supabase.from('banners').insert({ name: f.name.trim(), image_url, link_url: link || null, ends_at: f.ends ? new Date(f.ends + 'T23:59:59').toISOString() : null })
+      if (error) throw new Error(error.message)
+      setF({ name: '', link: '', ends: '' }); setFile(null)
+      toast('Banner publicado')
+      await load()
+    } catch (x) { setErr((x as Error).message) }
+    setBusy(false)
+  }
+  async function toggle(b: Ban) { await supabase.from('banners').update({ active: !b.active }).eq('id', b.id); load() }
+  async function remove(b: Ban) {
+    if (!(await ask('Se saca de la app.', { title: `¿Eliminar "${b.name}"?`, ok: 'Eliminar', danger: true }))) return
+    await supabase.from('banners').delete().eq('id', b.id); load()
+  }
+  return (
+    <>
+      <p className="small muted">Los banners se ven arriba en la pantalla de Campeonatos y dentro de cada campeonato. Si cargás varios, van rotando.</p>
+      <form className="card" onSubmit={add}>
+        <h3>Nuevo banner</h3>
+        <label className="lbl">Anunciante</label>
+        <input placeholder="Ej: Kiosco Don Pepe" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
+        <label className="lbl">Imagen</label>
+        <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <p className="small muted">{BANNER_HINT}</p>
+        <label className="lbl">Link al tocar (opcional)</label>
+        <input placeholder="https://instagram.com/…  o  https://wa.me/549…" value={f.link} onChange={(e) => setF({ ...f, link: e.target.value })} />
+        <label className="lbl">Se muestra hasta (opcional)</label>
+        <input type="date" value={f.ends} onChange={(e) => setF({ ...f, ends: e.target.value })} />
+        {preview && <><div className="small muted">Así se va a ver</div><div className="banner"><span className="tag">Publicidad</span><img src={preview} alt="" /></div></>}
+        {err && <p className="msg">{err}</p>}
+        <button className="primary" disabled={busy}>{busy ? 'Publicando…' : 'Publicar banner'}</button>
+      </form>
+      {rows === null ? <p className="muted">Cargando…</p> : rows.length === 0 ? <p className="empty">Todavía no cargaste banners.</p> : rows.map((b) => (
+        <div className="card" key={b.id}>
+          <strong>{b.name}</strong>
+          <div className="banner"><img src={b.image_url} alt="" /></div>
+          <div className="small muted">
+            {b.active && !(b.ends_at && new Date(b.ends_at) < new Date()) ? 'Activo' : 'Pausado o vencido'}
+            {b.ends_at ? ` · hasta ${new Date(b.ends_at).toLocaleDateString('es-AR')}` : ''}
+            {` · ${b.views} vistas · ${b.clicks} toques`}
+          </div>
+          <div className="actions">
+            <button className="sub" onClick={() => toggle(b)}>{b.active ? 'Pausar' : 'Activar'}</button>
+            <button className="sub danger" onClick={() => remove(b)}>Eliminar</button>
+          </div>
         </div>
       ))}
     </>

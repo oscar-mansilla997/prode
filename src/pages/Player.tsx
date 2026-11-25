@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { isFree, money, points, sortMatches, supabase, statusLabel, type Entry, type Match, type Profile, type PubGroup } from '../supabase'
 import { ask, copyText } from '../dialogs'
 import ShareButton, { appUrl } from '../Share'
+import Banner from '../Banner'
 import { Crest, GroupRanking, History, fmtDate } from '../components'
 
 type Draft = Record<string, { h: string; a: string }>
@@ -56,6 +57,7 @@ export default function Player({ profile }: { profile: Profile }) {
           ? <div className="potbox">Campeonato amistoso<strong style={{ fontSize: '1.2rem', color: 'var(--txt)' }}>Sin premio en dinero</strong><span className="small muted">{Number(group.players)} jugando</span></div>
           : <div className="potbox">Pozo para el ganador<strong>{money(Number(group.pot))}</strong><span className="small muted">{Number(group.players)} jugadores confirmados</span></div>}
       </div>
+      <Banner />
       <div className="seg">
         <button className={tab === 'jugar' ? 'on' : ''} onClick={() => setTab('jugar')}>{entries?.some((x) => x.submitted_at) ? 'Mis jugadas' : 'Jugar'}</button>
         <button className={tab === 'ranking' ? 'on' : ''} onClick={() => setTab('ranking')}>Ranking</button>
