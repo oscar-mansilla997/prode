@@ -6,23 +6,31 @@ export type BannerRow = { id: string; name: string; image_url: string; link_url:
 /** Publicidad cargada por la dueña. Si hay varias, van rotando. Si no hay ninguna, no se ve nada. */
 export default function Banner() {
   const [list, setList] = useState<BannerRow[]>([])
-  const [i, setI] = useState(0)
+  // Turno compartido entre pantallas: cada vez que entrás sale el siguiente banner, así todos se muestran parejo
+  const [seq, setSeq] = useState(() => {
+    let n = 0
+    try { n = (Number(localStorage.getItem('banner_seq')) || 0) + 1; localStorage.setItem('banner_seq', String(n)) } catch { /* sin almacenamiento */ }
+    return n
+  })
   const seen = useRef(new Set<string>())
 
   useEffect(() => {
     supabase.from('banners').select('id, name, image_url, link_url').eq('active', true)
       .then(({ data }) => {
-        const l = ((data as BannerRow[]) ?? []).sort(() => Math.random() - 0.5)
-        setList(l)
+        setList(((data as BannerRow[]) ?? []).sort((a, b) => a.id.localeCompare(b.id)))
       })
   }, [])
   useEffect(() => {
     if (list.length < 2) return
-    const t = setInterval(() => setI((x) => (x + 1) % list.length), 7000)
+    const t = setInterval(() => setSeq((x) => {
+      const n = x + 1
+      try { localStorage.setItem('banner_seq', String(n)) } catch { /* sin almacenamiento */ }
+      return n
+    }), 7000)
     return () => clearInterval(t)
   }, [list.length])
 
-  const b = list[i]
+  const b = list.length ? list[seq % list.length] : undefined
   useEffect(() => {
     if (b && !seen.current.has(b.id)) { seen.current.add(b.id); supabase.rpc('banner_event', { bid: b.id, kind: 'view' }) }
   }, [b?.id])
